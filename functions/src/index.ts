@@ -225,7 +225,7 @@ export const generateCompanionResponseSecure = functions.https.onCall(async (dat
 
         const result = await groqClient.chat.completions.create({
             model: "llama-3.3-70b-versatile",
-            max_tokens: 500,
+            max_tokens: 800,
             messages: [
                 {
                     role: "system",
@@ -242,7 +242,15 @@ CURRENT USER EMOTIONAL STATE:
 ${emotionContextString}
 
 If confidence is above 0.7 gently acknowledge the detected emotion in your response.
-If below 0.7 respond with general warmth.`
+If below 0.7 respond with general warmth.
+
+Response style requirements:
+- Sound like a real, caring person (not clinical, not robotic)
+- Use 2-4 short paragraphs, usually 120-220 words
+- Reflect what the user said before giving suggestions
+- Offer one gentle practical next step when appropriate
+- End with one warm, specific follow-up question
+- Avoid generic filler like "I'm here to help" unless contextually needed`
                 },
                 {
                     role: "user",

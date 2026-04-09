@@ -10,6 +10,61 @@ if (!GROQ_API_KEY || GROQ_API_KEY === 'your_groq_api_key_here') {
   console.error('❌ GROQ API KEY NOT CONFIGURED!');
 }
 
+async function callGroqDirect(userMessage: string, emotionContextString: string): Promise<string> {
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 800,
+      messages: [
+        {
+          role: "system",
+          content: `You are Haven, a calm and empathetic mental wellness companion for Indian students.
+You ONLY discuss stress, emotions, and mental wellness.
+You are NOT a therapist and never diagnose.
+If the user seems in crisis, gently suggest these Government of India helplines:
+KIRAN: 1800-599-0019 (Toll-Free, 24/7),
+Tele MANAS: 14416 (Toll-Free, 24/7),
+NIMHANS: 08046110007 (24/7).
+Respond in the same language the user writes in.
+
+CURRENT USER EMOTIONAL STATE:
+${emotionContextString}
+
+If confidence is above 0.7 gently acknowledge the detected emotion in your response.
+If below 0.7 respond with general warmth.
+
+Response style requirements:
+- Sound like a real, caring person (not clinical, not robotic)
+- Use 2-4 short paragraphs, usually 120-220 words
+- Reflect what the user said before giving suggestions
+- Offer one gentle practical next step when appropriate
+- End with one warm, specific follow-up question
+- Avoid generic filler like "I'm here to help" unless contextually needed`
+        },
+        {
+          role: "user",
+          content: userMessage
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Groq fallback failed with status ${response.status}`);
+  }
+
+  const json = await response.json();
+  return (
+    json?.choices?.[0]?.message?.content ??
+    "I am here for you. Can you tell me more about how you are feeling?"
+  );
+}
+
 export interface MentalHealthContext {
   userId: string;
   sessionId: string;
@@ -188,10 +243,16 @@ export class GoogleCloudMentalHealthAI {
         userMessage,
         emotionContextString: emotionContext.contextString
       });
-      const response = await callCompanion({ payload });
-      const generatedText =
-        response.data?.message ??
-        "I am here for you. Can you tell me more about how you are feeling?";
+      let generatedText = "";
+      try {
+        const response = await callCompanion({ payload });
+        generatedText =
+          response.data?.message ??
+          "I am here for you. Can you tell me more about how you are feeling?";
+      } catch (callableError) {
+        console.warn("⚠️ Secure callable failed, using direct Groq fallback:", callableError);
+        generatedText = await callGroqDirect(userMessage, emotionContext.contextString);
+      }
       
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('📥 RECEIVED FROM GROQ');
