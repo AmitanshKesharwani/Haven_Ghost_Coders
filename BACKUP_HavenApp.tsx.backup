@@ -1,0 +1,71 @@
+// BACKUP of HavenApp.tsx before deletion
+// This component was not being used in the production app
+// AppRouter.tsx is the active router component
+// Backed up on: November 1, 2025
+
+// Original file content backed up for reference
+// If needed, this can be restored from this backup file
+
+// FULL ORIGINAL CONTENT:
+import React, { useState, useEffect } from 'react';
+
+import { Toaster } from 'sonner';
+
+// Import existing components
+import OnboardingFlow from './OnboardingFlow';
+import HomePage from './HomePage';
+import AICompanion from './AICompanion';
+import Journal from './Journal';
+
+
+// Import new advanced components
+import { AdvancedDashboard } from './AdvancedDashboard';
+import VoiceTherapy from './VoiceTherapy';
+import EmotionDetection from './EmotionDetection';
+import ErrorBoundary from './ErrorBoundary';
+
+// Import services
+import { sessionManager } from '../services/sessionManager';
+
+import { emotionDetection } from '../services/emotionDetection';
+
+// Navigation component
+
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Badge } from './ui/badge';
+import {
+  Home,
+  Brain,
+  BookOpen,
+  MessageCircle,
+  BarChart3,
+  Settings,
+  User,
+  Heart,
+  Mic,
+  Camera,
+  Activity,
+  Menu,
+  X
+} from 'lucide-react';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  onboardingComplete: boolean;
+  preferences: {
+    language: 'hindi' | 'english' | 'mixed' | 'bengali' | 'marathi' | 'telugu' | 'tamil' | 'gujarati' | 'kannada' | 'malayalam' | 'urdu' | 'punjabi' | 'odia' | 'assamese';
+    culturalBackground: string;
+    communicationStyle: 'formal' | 'casual';
+  };
+  mentalHealthProfile: {
+    primaryConcerns: string[];
+    goals: string[];
+    riskFactors: string[];
+    protectiveFactors: string[];
+  };
+}
+
+// ... [REST OF ORIGINAL FILE CONTENT - 524 lines total] ...

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- WhatsApp-style background with doodles -->
+  <rect width="200" height="200" fill="#f0f2f5"/>
+  
+  <!-- Doodle elements in light gray -->
+  <g fill="none" stroke="#d1d7db" stroke-width="1" opacity="0.4">
+    <!-- Simple doodle elements -->
+    <!-- Smiley face -->
+    <circle cx="30" cy="30" r="8"/>
+    <circle cx="27" cy="27" r="1" fill="#d1d7db"/>
+    <circle cx="33" cy="27" r="1" fill="#d1d7db"/>
+    <path d="M25 33 Q30 36 35 33"/>
+    
+    <!-- Phone -->
+    <rect x="80" y="20" width="12" height="20" rx="2"/>
+    <circle cx="86" cy="42" r="1"/>
+    
+    <!-- Message bubble -->
+    <path d="M130 25 Q145 25 145 32 Q145 39 130 39 L127 42 L130 39 Q120 39 120 32 Q120 25 130 25"/>
+    
+    <!-- Heart -->
+    <path d="M170 30 Q167 27 164 30 Q167 33 170 36 Q173 33 176 30 Q173 27 170 30"/>
+    
+    <!-- Camera -->
+    <rect x="20" y="80" width="15" height="12" rx="1"/>
+    <circle cx="27" cy="86" r="3"/>
+    
+    <!-- Music note -->
+    <circle cx="70" cy="90" r="2"/>
+    <path d="M72 90 L72 75 L80 73 L80 88"/>
+    
+    <!-- Star -->
+    <path d="M120 85 L122 90 L127 90 L123 93 L125 98 L120 95 L115 98 L117 93 L113 90 L118 90 Z"/>
+    
+    <!-- Coffee cup -->
+    <path d="M160 80 L160 95 Q160 98 163 98 L172 98 Q175 98 175 95 L175 80"/>
+    <path d="M175 85 Q178 85 178 88 Q178 91 175 91"/>
+    
+    <!-- Bicycle wheel -->
+    <circle cx="30" cy="140" r="6"/>
+    <circle cx="50" cy="140" r="6"/>
+    <path d="M30 140 L40 130 L45 130 L50 140"/>
+    
+    <!-- Gift box -->
+    <rect x="80" y="130" width="12" height="12"/>
+    <path d="M75 136 L95 136 M86 125 Q83 128 86 131 Q89 128 86 125"/>
+    
+    <!-- Lightbulb -->
+    <circle cx="130" cy="140" r="5"/>
+    <rect x="128" y="143" width="4" height="5"/>
+    
+    <!-- Clock -->
+    <circle cx="170" cy="140" r="6"/>
+    <path d="M170 140 L170 135 M170 140 L174 142"/>
+  </g>
+</svg>

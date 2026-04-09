@@ -1,0 +1,64 @@
+/* Vanta.js Background Container */
+.vanta-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -10;
+  overflow: hidden;
+  pointer-events: none; /* Allow clicks to pass through */
+}
+
+.vanta-background-local {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+
+/* Fallback gradients for when Vanta.js fails to load */
+.vanta-background.fallback-ocean {
+  background: linear-gradient(135deg, #4a90a4 0%, #5a9fb5 50%, #87ceeb 100%);
+}
+
+.vanta-background.fallback-forest {
+  background: linear-gradient(135deg, #c9d7cb 0%, #c2d4c8 50%, #cfdcd1 100%);
+}
+
+.vanta-background.fallback-whatsapp {
+  background: linear-gradient(135deg, #0B141A 0%, #1F2937 50%, #111827 100%);
+}
+
+/* Ensure Vanta canvas fills container */
+.vanta-background canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+/* Enhanced fog visibility for forest theme */
+.forest-theme .vanta-background canvas {
+  opacity: 1 !important;
+  filter: contrast(1.2) brightness(1.1) saturate(1.1);
+}
+
+/* Ensure fog shows through transparent backgrounds */
+.forest-theme .vanta-background {
+  z-index: -5 !important;
+}
+
+/* Make sure content has proper layering */
+.forest-theme .flex {
+  position: relative;
+  z-index: 1;
+}
+
+:root, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+
