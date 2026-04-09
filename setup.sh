@@ -95,12 +95,12 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
 VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
 
-# Google AI API Keys (Required for AI Features)
-VITE_GEMINI_API_KEY=your_gemini_api_key_here
+# AI API Keys (Required for AI Features)
+VITE_GROQ_API_KEY=your_groq_api_key_here
+VITE_HF_TOKEN=your_huggingface_token_here
 
 # Feature Flags
 VITE_ENABLE_FIREBASE=true
-VITE_ENABLE_GEMINI_AI=true
 VITE_ENABLE_VOICE_FEATURES=true
 VITE_ENABLE_VIDEO_FEATURES=true
 VITE_ENABLE_ADVANCED_ANALYTICS=true
@@ -131,10 +131,10 @@ check_environment() {
         fi
     done
     
-    # Check for Gemini API key
-    MISSING_GEMINI=0
-    if grep -q "^VITE_GEMINI_API_KEY=your_" .env 2>/dev/null; then
-        MISSING_GEMINI=1
+    # Check for Groq API key
+    MISSING_GROQ=0
+    if grep -q "^VITE_GROQ_API_KEY=your_" .env 2>/dev/null; then
+        MISSING_GROQ=1
     fi
     
     if [ $MISSING_FIREBASE -eq 1 ]; then
@@ -144,11 +144,11 @@ check_environment() {
         print_status "Firebase configuration appears to be set"
     fi
     
-    if [ $MISSING_GEMINI -eq 1 ]; then
-        print_warning "Gemini API key needs to be updated in .env file"
-        echo "  Get your free API key from: https://makersuite.google.com/app/apikey"
+    if [ $MISSING_GROQ -eq 1 ]; then
+        print_warning "Groq API key needs to be updated in .env file"
+        echo "  Get your API key from: https://console.groq.com/keys"
     else
-        print_status "Gemini API key appears to be set"
+        print_status "Groq API key appears to be set"
     fi
 }
 
@@ -172,9 +172,9 @@ start_dev_server() {
     echo "🚀 Haven will be available at: http://localhost:5173"
     echo ""
     echo "📚 Quick Start Guide:"
-    echo "  1. Update .env file with your Firebase and Gemini API keys"
+        echo "  1. Update .env file with your Firebase and Groq/HuggingFace API keys"
     echo "  2. Follow FIREBASE_SETUP_GUIDE.md for Firebase setup"
-    echo "  3. Follow API_SETUP_GUIDE.md for AI API setup"
+        echo "  3. Configure VITE_GROQ_API_KEY and VITE_HF_TOKEN in .env"
     echo ""
     echo "🔧 Available Commands:"
     echo "  npm run dev     - Start development server"
@@ -231,8 +231,9 @@ main() {
         echo "   - Update .env with Firebase config"
         echo ""
         echo "2. 🤖 AI Setup (Required for AI features):"
-        echo "   - Get Gemini API key: https://makersuite.google.com/app/apikey"
-        echo "   - Update VITE_GEMINI_API_KEY in .env"
+        echo "   - Get Groq API key: https://console.groq.com/keys"
+        echo "   - Get HuggingFace token: https://huggingface.co/settings/tokens"
+        echo "   - Update VITE_GROQ_API_KEY and VITE_HF_TOKEN in .env"
         echo ""
         echo "3. 🚀 Start Development:"
         

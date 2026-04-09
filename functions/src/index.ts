@@ -11,11 +11,11 @@
 // admin.initializeApp();
 // const db = admin.firestore();
 
-// // --- Configuration for Gemini (Journal Analysis) ---
+// // --- Legacy journal analysis config ---
 // const getGenAI = () => {
-//     const apiKey = process.env.GEMINI_API_KEY;
+//     const apiKey = process.env.GROQ_API_KEY;
 //     if (!apiKey) {
-//         throw new Error("Gemini API Key not set in function environment variables...");
+//         throw new Error("Groq API Key not set in function environment variables...");
 //     }
 //     return initialized AI client;
 // };
@@ -118,6 +118,8 @@
 
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
+import * as functions from "firebase-functions";
+import * as crypto from "crypto";
 import Groq from "groq-sdk";
 // import * as functions from "firebase-functions"; // Import functions
 
@@ -134,6 +136,207 @@ import { advanceTherapySession } from "./therapyEngine";
 const db = admin.firestore();
 const groqClient = new Groq({
     apiKey: process.env.GROQ_API_KEY
+});
+
+function decryptPayload(payload: any): any {
+    const keyMaterial = process.env.NETWORK_ENCRYPTION_KEY || process.env.VITE_ENCRYPTION_KEY;
+    if (!keyMaterial) {
+        throw new Error("Missing NETWORK_ENCRYPTION_KEY (or VITE_ENCRYPTION_KEY) in functions environment.");
+    }
+
+    if (!payload?.iv || !payload?.data) {
+        throw new Error("Invalid encrypted payload.");
+    }
+
+    const key = crypto.createHash("sha256").update(keyMaterial).digest();
+    const iv = Buffer.from(payload.iv, "base64");
+    const encrypted = Buffer.from(payload.data, "base64");
+    const authTag = encrypted.subarray(encrypted.length - 16);
+    const ciphertext = encrypted.subarray(0, encrypted.length - 16);
+
+    const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(authTag);
+
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
+    return JSON.parse(decrypted);
+}
+
+export const analyzeEmotionalContext = functions.https.onCall(async (data: any) => {
+    const fallback = {
+        topEmotion: "unknown",
+        confidence: 0,
+        allEmotions: [],
+        contextString: "Respond with general empathy and care."
+    };
+
+    try {
+        const decrypted = decryptPayload(data?.payload);
+        const text = typeof decrypted?.text === "string" ? decrypted.text : "";
+        if (!text) return fallback;
+
+        const hfToken = process.env.HF_TOKEN || process.env.VITE_HF_TOKEN;
+        if (!hfToken) return fallback;
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+
+        const response = await fetch("https://api-inference.huggingface.co/models/mental/mental-roberta-base", {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${hfToken}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ inputs: text }),
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        if (!response.ok) return fallback;
+
+        const parsed = await response.json();
+        const emotions = Array.isArray(parsed?.[0]) ? parsed[0] : parsed;
+        if (!Array.isArray(emotions) || emotions.length === 0) return fallback;
+
+        const top = emotions.reduce((a: any, b: any) => (a.score > b.score ? a : b));
+        return {
+            topEmotion: top?.label ?? "unknown",
+            confidence: typeof top?.score === "number" ? top.score : 0,
+            allEmotions: emotions,
+            contextString: `User appears to be experiencing ${top?.label ?? "unknown"} (${Math.round((top?.score ?? 0) * 100)}% confidence). Respond with extra care and warmth.`
+        };
+    } catch (error) {
+        console.error("analyzeEmotionalContext callable error:", error);
+        return fallback;
+    }
+});
+
+export const generateCompanionResponseSecure = functions.https.onCall(async (data: any) => {
+    try {
+        const decrypted = decryptPayload(data?.payload);
+        const userMessage = typeof decrypted?.userMessage === "string" ? decrypted.userMessage : "";
+        const emotionContextString =
+            typeof decrypted?.emotionContextString === "string"
+                ? decrypted.emotionContextString
+                : "Respond with general empathy and care.";
+
+        if (!userMessage) {
+            return { message: "I am here for you. Can you tell me more about how you are feeling?" };
+        }
+
+        const result = await groqClient.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            max_tokens: 500,
+            messages: [
+                {
+                    role: "system",
+                    content: `You are Haven, a calm and empathetic mental wellness companion for Indian students.
+You ONLY discuss stress, emotions, and mental wellness.
+You are NOT a therapist and never diagnose.
+If the user seems in crisis, gently suggest these Government of India helplines:
+KIRAN: 1800-599-0019 (Toll-Free, 24/7),
+Tele MANAS: 14416 (Toll-Free, 24/7),
+NIMHANS: 08046110007 (24/7).
+Respond in the same language the user writes in.
+
+CURRENT USER EMOTIONAL STATE:
+${emotionContextString}
+
+If confidence is above 0.7 gently acknowledge the detected emotion in your response.
+If below 0.7 respond with general warmth.`
+                },
+                {
+                    role: "user",
+                    content: userMessage
+                }
+            ]
+        });
+
+        return {
+            message:
+                result.choices[0]?.message?.content ??
+                "I am here for you. Can you tell me more about how you are feeling?"
+        };
+    } catch (error: any) {
+        console.error("generateCompanionResponseSecure error:", error);
+        return { message: "I am here for you. Can you tell me more about how you are feeling?" };
+    }
+});
+
+export const analyzeJournalEntrySecure = functions.https.onCall(async (data: any) => {
+    const fallback = {
+        sentimentScore: 0,
+        sentimentMagnitude: 0.4,
+        keyThemes: [],
+        positiveMentions: [],
+        negativeMentions: [],
+        potentialTriggers: [],
+        copingMentioned: [],
+        riskFlags: [],
+        summary: "Unable to analyze entry right now.",
+        modelVersion: "llama-3.3-70b-versatile",
+        analysisTimestamp: new Date().toISOString()
+    };
+
+    try {
+        const decrypted = decryptPayload(data?.payload);
+        const content = typeof decrypted?.content === "string" ? decrypted.content : "";
+        const mood = typeof decrypted?.mood === "string" ? decrypted.mood : "neutral";
+        if (!content) return fallback;
+
+        const prompt = `Mood: ${mood}
+Journal content:
+${content}`;
+
+        const result = await groqClient.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            max_tokens: 700,
+            messages: [
+                {
+                    role: "system",
+                    content: `You are a mental wellness journal analysis assistant.
+Return ONLY valid JSON with these exact keys:
+sentimentScore, sentimentMagnitude, keyThemes, positiveMentions, negativeMentions, potentialTriggers, copingMentioned, riskFlags, summary.
+
+Rules:
+- sentimentScore must be a number from -1 to 1
+- sentimentMagnitude must be a number from 0 to 1
+- keyThemes and other list fields must be arrays of short strings
+- summary must be one concise supportive sentence
+- If uncertain, keep arrays empty and score near neutral`
+                },
+                { role: "user", content: prompt }
+            ]
+        });
+
+        const outputText = result.choices[0]?.message?.content ?? "{}";
+        const cleanedText = String(outputText).replace(/^```json\s*|```\s*$/g, "").trim();
+        const parsed = JSON.parse(cleanedText);
+
+        const toStringArray = (value: any): string[] =>
+            Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
+        const safeScoreRaw = typeof parsed?.sentimentScore === "number" ? parsed.sentimentScore : 0;
+        const safeMagRaw = typeof parsed?.sentimentMagnitude === "number" ? parsed.sentimentMagnitude : 0.4;
+
+        return {
+            sentimentScore: Math.max(-1, Math.min(1, safeScoreRaw)),
+            sentimentMagnitude: Math.max(0, Math.min(1, safeMagRaw)),
+            keyThemes: toStringArray(parsed?.keyThemes),
+            positiveMentions: toStringArray(parsed?.positiveMentions),
+            negativeMentions: toStringArray(parsed?.negativeMentions),
+            potentialTriggers: toStringArray(parsed?.potentialTriggers),
+            copingMentioned: toStringArray(parsed?.copingMentioned),
+            riskFlags: toStringArray(parsed?.riskFlags),
+            summary:
+                typeof parsed?.summary === "string" && parsed.summary.trim().length > 0
+                    ? parsed.summary.trim()
+                    : fallback.summary,
+            modelVersion: "llama-3.3-70b-versatile",
+            analysisTimestamp: new Date().toISOString()
+        };
+    } catch (error) {
+        console.error("analyzeJournalEntrySecure error:", error);
+        return fallback;
+    }
 });
 
 // --- Journal Analysis Logic ---

@@ -21,7 +21,7 @@
 
 1. **Create Environment File**: Create `.env.Haven-mental-health` in the functions directory with:
    ```
-   GEMINI_API_KEY=your_gemini_api_key_here
+   GROQ_API_KEY=your_groq_api_key_here
    ```
 
 2. **Google Cloud Credentials**: Ensure your Firebase project has the following APIs enabled:
@@ -77,7 +77,7 @@ After deployment, you should see the following functions in your Firebase Consol
    - Solution: Run `firebase functions:log` to see detailed errors
 
 4. **API Key Issues**: 
-   - Ensure GEMINI_API_KEY is set in the environment file
+   - Ensure GROQ_API_KEY is set in the environment file
    - Verify Google Cloud APIs are enabled
 
 ### Testing Functions Locally:

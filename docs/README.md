@@ -5,7 +5,7 @@ A culturally-aware mental health support platform designed specifically for Indi
 ## 🌟 Features
 
 ### 🤖 AI-Powered Conversations
-- **Gemini AI Integration**: Advanced conversational AI with cultural context
+- **Groq AI Integration**: Advanced conversational AI with cultural context
 - **Bilingual Support**: Seamless Hindi-English conversations
 - **Emotion Detection**: Real-time emotional state analysis
 - **Crisis Detection**: Automatic risk assessment and intervention
@@ -35,7 +35,7 @@ A culturally-aware mental health support platform designed specifically for Indi
 - **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: Tailwind CSS + Radix UI
 - **Backend**: Firebase (Auth, Firestore, Hosting)
-- **AI Services**: Google Gemini AI
+- **AI Services**: Groq + HuggingFace (emotion pre-analysis)
 - **Analytics**: Firebase Analytics
 - **Deployment**: Firebase Hosting
 
@@ -55,7 +55,7 @@ A culturally-aware mental health support platform designed specifically for Indi
 3. **Set up environment variables**
    ```bash
    cp .env.example .env
-   # Edit .env with your Firebase and Google AI credentials
+   # Edit .env with your Firebase and Groq/HuggingFace credentials
    ```
 
 4. **Start development server**
@@ -75,9 +75,10 @@ A culturally-aware mental health support platform designed specifically for Indi
 2. Enable Authentication, Firestore, and Hosting
 3. Add your Firebase config to `.env`
 
-### Google AI Setup
-1. Get Gemini API key from [Google AI Studio](https://makersuite.google.com)
-2. Add the API key to `.env` as `VITE_GEMINI_API_KEY`
+### AI Setup
+1. Get Groq API key from [Groq Console](https://console.groq.com/keys)
+2. Get HuggingFace token from [Hugging Face Tokens](https://huggingface.co/settings/tokens)
+3. Add both to `.env`
 
 ### Environment Variables
 ```env
@@ -89,8 +90,9 @@ VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
 
-# Google AI
-VITE_GEMINI_API_KEY=your_gemini_api_key
+# AI
+VITE_GROQ_API_KEY=your_groq_api_key
+VITE_HF_TOKEN=your_huggingface_token
 ```
 
 ## 🚀 Deployment
@@ -113,7 +115,7 @@ firebase deploy --only hosting
 
 ### Service Breakdown
 - **Firebase**: $0-25/month (Free tier available)
-- **Google AI Services**: $10-50/month
+- **AI Services**: Usage-based (Groq/HuggingFace)
 - **Infrastructure**: $5-25/month
 
 ## 🏗️ Project Structure
@@ -152,7 +154,8 @@ For support and questions:
 
 ## 🙏 Acknowledgments
 
-- **Google AI**: For Gemini API
+- **Groq**: For LLM inference
+- **HuggingFace**: For emotion inference
 - **Firebase**: For backend infrastructure
 - **Radix UI**: For accessible UI components
 - **Tailwind CSS**: For styling framework

@@ -1,6 +1,7 @@
-// Browser-Compatible AI Integration - GROQ API
-import Groq from "groq-sdk";
+// Browser-Compatible AI Integration (secure function proxy)
 import { analyzeEmotionalContext } from "./emotionAnalysis";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { encryptTransportPayload } from "./transportEncryption";
 
 // Configuration
 const GROQ_API_KEY = (import.meta as any).env.VITE_GROQ_API_KEY as string;
@@ -8,11 +9,6 @@ const GROQ_API_KEY = (import.meta as any).env.VITE_GROQ_API_KEY as string;
 if (!GROQ_API_KEY || GROQ_API_KEY === 'your_groq_api_key_here') {
   console.error('❌ GROQ API KEY NOT CONFIGURED!');
 }
-
-const groq = new Groq({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
-  dangerouslyAllowBrowser: true
-});
 
 export interface MentalHealthContext {
   userId: string;
@@ -87,7 +83,7 @@ export class GoogleCloudMentalHealthAI {
         throw new Error('Groq API key not configured');
       }
 
-      this.model = groq;
+      this.model = true;
 
       this.isInitialized = true;
       console.log('✅ Groq AI initialized successfully');
@@ -183,36 +179,18 @@ export class GoogleCloudMentalHealthAI {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       const emotionContext = await analyzeEmotionalContext(userMessage);
-      const response = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        max_tokens: 500,
-        messages: [
-          {
-            role: "system",
-            content: `You are Haven, a calm and empathetic 
-mental wellness companion for Indian students. 
-You ONLY discuss stress, emotions, and mental wellness. 
-You are NOT a therapist and never diagnose. 
-If the user seems in crisis, gently suggest 
-iCall helpline: 9152987821. 
-Respond in the same language the user writes in.
-
-CURRENT USER EMOTIONAL STATE:
-${emotionContext.contextString}
-
-If confidence is above 0.7 gently acknowledge 
-the detected emotion in your response. 
-If below 0.7 respond with general warmth.`
-          },
-          {
-            role: "user",
-            content: userMessage
-          }
-        ]
+      const functions = getFunctions();
+      const callCompanion = httpsCallable<
+        { payload: { iv: string; data: string } },
+        { message?: string }
+      >(functions, "generateCompanionResponseSecure");
+      const payload = await encryptTransportPayload({
+        userMessage,
+        emotionContextString: emotionContext.contextString
       });
-
+      const response = await callCompanion({ payload });
       const generatedText =
-        response.choices[0]?.message?.content ??
+        response.data?.message ??
         "I am here for you. Can you tell me more about how you are feeling?";
       
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

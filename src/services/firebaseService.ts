@@ -31,6 +31,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { encryptTransportPayload } from './transportEncryption';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -1483,16 +1484,87 @@ export class FirebaseService {
   }
 
   // ==================== JOURNAL MANAGEMENT ====================
+  private readonly JOURNAL_STORAGE_KEY = "haven_journal_entries";
+
+  private async analyzeJournalEntryLocally(content: string, mood: JournalEntry["mood"]): Promise<JournalEntry["aiInsights"]> {
+    const fallbackInsights: JournalEntry["aiInsights"] = {
+      sentimentScore: 0,
+      sentimentMagnitude: 0.4,
+      keyThemes: [],
+      positiveMentions: [],
+      negativeMentions: [],
+      potentialTriggers: [],
+      copingMentioned: [],
+      riskFlags: [],
+      summary: "Unable to analyze entry right now.",
+      analysisTimestamp: new Date(),
+      modelVersion: "llama-3.3-70b-versatile"
+    };
+
+    try {
+      const functions = getFunctions();
+      const callJournalAnalysis = httpsCallable<
+        { payload: { iv: string; data: string } },
+        JournalEntry["aiInsights"]
+      >(functions, "analyzeJournalEntrySecure");
+
+      const payload = await encryptTransportPayload({ content, mood });
+      const result = await callJournalAnalysis({ payload });
+      const data = result?.data;
+      if (!data) return fallbackInsights;
+      return {
+        ...data,
+        analysisTimestamp: data.analysisTimestamp ? new Date(data.analysisTimestamp as any) : new Date()
+      };
+    } catch (error) {
+      console.error("Error analyzing journal entry locally:", error);
+      return fallbackInsights;
+    }
+  }
+
+  private readJournalEntriesFromLocalStorage(): JournalEntry[] {
+    try {
+      const raw = localStorage.getItem(this.JOURNAL_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((entry: any) => ({
+        ...entry,
+        createdAt: new Date(entry.createdAt),
+        updatedAt: new Date(entry.updatedAt)
+      })) as JournalEntry[];
+    } catch (error) {
+      console.error("Error reading journal entries from localStorage:", error);
+      return [];
+    }
+  }
+
+  private writeJournalEntriesToLocalStorage(entries: JournalEntry[]): void {
+    try {
+      localStorage.setItem(this.JOURNAL_STORAGE_KEY, JSON.stringify(entries));
+    } catch (error) {
+      console.error("Error writing journal entries to localStorage:", error);
+      throw error;
+    }
+  }
 
   // Create journal entry
   async createJournalEntry(entry: Omit<JournalEntry, 'entryId'>): Promise<string> {
     try {
-      const docRef = await addDoc(collection(db, 'journal_entries'), {
+      const entryId = `journal_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      const now = new Date();
+      const entries = this.readJournalEntriesFromLocalStorage();
+      const aiInsights = await this.analyzeJournalEntryLocally(entry.content, entry.mood);
+      const newEntry: JournalEntry = {
+        entryId,
         ...entry,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-      return docRef.id;
+        aiInsights,
+        createdAt: now,
+        updatedAt: now
+      };
+      entries.push(newEntry);
+      this.writeJournalEntriesToLocalStorage(entries);
+      return entryId;
     } catch (error) {
       console.error('Error creating journal entry:', error);
       throw error;
@@ -1502,23 +1574,10 @@ export class FirebaseService {
   // Get user's journal entries (NO INDEX REQUIRED)
   async getJournalEntries(userId: string, limitCount: number = 50): Promise<JournalEntry[]> {
     try {
-      // Simple query without composite index - just filter by userId
-      const q = query(
-        collection(db, 'journal_entries'),
-        where('userId', '==', userId),
-        limit(limitCount)
-      );
-
-      const querySnapshot = await getDocs(q);
-      const entries = querySnapshot.docs.map(doc => ({
-        entryId: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date()
-      })) as JournalEntry[];
-
-      // Sort in memory by createdAt descending
-      return entries.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      const entries = this.readJournalEntriesFromLocalStorage()
+        .filter((entry) => entry.userId === userId)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      return entries.slice(0, limitCount);
     } catch (error) {
       console.error('Error getting journal entries:', error);
       throw error;
@@ -1623,11 +1682,31 @@ export class FirebaseService {
   // Update journal entry
   async updateJournalEntry(entryId: string, updates: Partial<JournalEntry>): Promise<void> {
     try {
-      const docRef = doc(db, 'journal_entries', entryId);
-      await updateDoc(docRef, {
-        ...updates,
-        updatedAt: serverTimestamp()
+      const entries = this.readJournalEntriesFromLocalStorage();
+      const currentEntry = entries.find((entry) => entry.entryId === entryId);
+      const mergedEntry = currentEntry ? { ...currentEntry, ...updates } : null;
+      const shouldReanalyze =
+        !!mergedEntry &&
+        (typeof updates.content === "string" || typeof updates.mood === "string");
+
+      let reanalyzedInsights: JournalEntry["aiInsights"] | undefined = undefined;
+      if (shouldReanalyze && mergedEntry) {
+        reanalyzedInsights = await this.analyzeJournalEntryLocally(
+          mergedEntry.content,
+          mergedEntry.mood
+        );
+      }
+
+      const updatedEntries = entries.map((entry) => {
+        if (entry.entryId !== entryId) return entry;
+        return {
+          ...entry,
+          ...updates,
+          ...(reanalyzedInsights ? { aiInsights: reanalyzedInsights } : {}),
+          updatedAt: new Date()
+        };
       });
+      this.writeJournalEntriesToLocalStorage(updatedEntries);
     } catch (error) {
       console.error('Error updating journal entry:', error);
       throw error;
@@ -1637,7 +1716,9 @@ export class FirebaseService {
   // Delete journal entry
   async deleteJournalEntry(entryId: string): Promise<void> {
     try {
-      await deleteDoc(doc(db, 'journal_entries', entryId));
+      const entries = this.readJournalEntriesFromLocalStorage();
+      const filteredEntries = entries.filter((entry) => entry.entryId !== entryId);
+      this.writeJournalEntriesToLocalStorage(filteredEntries);
     } catch (error) {
       console.error('Error deleting journal entry:', error);
       throw error;
@@ -1647,14 +1728,20 @@ export class FirebaseService {
 
   async updateJournalEntryWithAIInsights(entryId: string, insights: JournalEntry['aiInsights']): Promise<void> {
     try {
-      const docRef = doc(db, 'journal_entries', entryId);
-      await updateDoc(docRef, {
-        aiInsights: { // Ensure insights object is properly structured
+      const entries = this.readJournalEntriesFromLocalStorage();
+      const updatedEntries = entries.map((entry) =>
+        entry.entryId === entryId
+          ? {
+              ...entry,
+              aiInsights: {
           ...insights,
-          analysisTimestamp: serverTimestamp() // Add timestamp in the function
-        },
-        updatedAt: serverTimestamp() // Also update the main entry timestamp
-      });
+                analysisTimestamp: new Date()
+              },
+              updatedAt: new Date()
+            }
+          : entry
+      );
+      this.writeJournalEntriesToLocalStorage(updatedEntries);
       console.log(`🧠 AI Insights added to journal entry ${entryId}`);
     } catch (error) {
       console.error(`Error updating journal entry ${entryId} with AI insights:`, error);

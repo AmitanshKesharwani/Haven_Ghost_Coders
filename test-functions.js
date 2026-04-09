@@ -72,6 +72,6 @@ if (!fs.existsSync('./functions/lib')) {
 console.log('\n🎉 Setup verification complete!');
 console.log('\nNext steps:');
 console.log('1. cd functions && npm install');
-console.log('2. firebase functions:config:set gemini.key="YOUR_API_KEY"');
+console.log('2. set GROQ_API_KEY in functions/.env or function secrets');
 console.log('3. firebase deploy --only functions');
-console.log('\nFor detailed instructions, see FIREBASE_FUNCTIONS_SETUP.md');
+console.log('\nFor detailed instructions, see functions/DEPLOYMENT.md');

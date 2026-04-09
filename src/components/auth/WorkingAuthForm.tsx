@@ -522,7 +522,7 @@ export const WorkingAuthForm: React.FC<WorkingAuthFormProps> = ({ onSuccess }) =
                 <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
                   <p style={{ fontSize: '0.75rem', color: '#c4b5fd' }}>
                     Need immediate help? Call:{' '}
-                    <span style={{ fontWeight: 'bold', color: '#f87171' }}>9152987821</span> (24/7)
+                    <span style={{ fontWeight: 'bold', color: '#f87171' }}>1800-599-0019</span> (KIRAN, Toll-Free 24/7)
                   </p>
                 </div>
               </div>

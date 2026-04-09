@@ -260,7 +260,7 @@ export const FirebaseSetup: React.FC = () => {
             'Shared crisis helpline numbers',
             'Scheduled follow-up check-in'
           ],
-          helplinesCalled: ['9152987821'],
+          helplinesCalled: ['1800-599-0019', '14416'],
           professionalReferral: false,
           followUpScheduled: true,
           resolution: 'resolved' as const,
@@ -284,7 +284,7 @@ export const FirebaseSetup: React.FC = () => {
           avatarStyle: 'friendly',
           notificationsEnabled: true,
           crisisContactName: 'Emergency Contact',
-          crisisContactPhone: '9152987821'
+          crisisContactPhone: '1800-599-0019'
         },
         mentalHealthProfile: {
           primaryConcerns: ['anxiety', 'work stress', 'sleep issues'],
