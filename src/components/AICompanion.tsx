@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'; // Adde
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
-import { ArrowLeft, Send, User, Heart, AlertTriangle, Phone, Mic, MicOff, Video, VideoOff, List, MessageSquarePlus, Loader2, Volume2 } from 'lucide-react'; // Added icons
+import { ArrowLeft, Send, User, Heart, AlertTriangle, Phone, Mic, MicOff, Video, VideoOff, List, MessageSquarePlus, Loader2, Volume2, Trash2 } from 'lucide-react'; // Added icons
 import type { Screen, UserData } from '../types';
 import { type AIResponse } from '../services/googleCloudAI';
 import { aiOrchestrator, type ActivityRecommendation, type ConversationContext } from '../services/aiOrchestrator';
@@ -14,7 +14,7 @@ import { emotionDetection } from '../services/emotionDetection';
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { toast } from 'sonner';
 import { type ChatConversation, type ChatMessage } from '../services/firebaseService'; // Import types
-import { createConversation, addMessage, getConversationMessages, getUserConversations } from '../services/localChatStorage';
+import { createConversation, addMessage, getConversationMessages, getUserConversations, clearAllChatHistory } from '../services/localChatStorage';
 import { X } from 'lucide-react';
 import { AVAILABLE_VOICES, type VoiceOption } from '../services/speechServices';
 
@@ -1116,9 +1116,30 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
               setShowConversationList(false); // Close sidebar on new chat
             }}
             variant="outline"
-            className="w-full mb-6 border-primary/30 hover:bg-primary/5 text-primary rounded-lg py-3"
+            className="w-full mb-3 border-primary/30 hover:bg-primary/5 text-primary rounded-lg py-3"
           >
             <MessageSquarePlus className="w-4 h-4 mr-2" /> New Chat
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full mb-6 border-destructive/30 text-destructive hover:bg-destructive/10 rounded-lg py-2 text-sm"
+            disabled={!currentUser || conversationList.length === 0}
+            onClick={async () => {
+              if (!currentUser || conversationList.length === 0) return;
+              if (
+                !window.confirm(
+                  "Delete all saved companion chats on this device? This cannot be undone."
+                )
+              ) {
+                return;
+              }
+              await clearAllChatHistory();
+              setCurrentConversationId(null);
+              setConversationList([]);
+              toast.success("Chat history cleared.");
+            }}
+          >
+            <Trash2 className="w-4 h-4 mr-2" /> Clear all history
           </Button>
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
             {isLoadingConversations ? (

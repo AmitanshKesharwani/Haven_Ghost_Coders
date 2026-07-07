@@ -167,3 +167,13 @@ export async function deleteConversation(
     console.error("localChatStorage.deleteConversation error:", error);
   }
 }
+
+/** Removes all locally stored companion conversations and messages for this browser. */
+export async function clearAllChatHistory(): Promise<void> {
+  try {
+    localStorage.removeItem(CONVERSATIONS_KEY);
+    localStorage.removeItem(MESSAGES_KEY);
+  } catch (error) {
+    console.error("localChatStorage.clearAllChatHistory error:", error);
+  }
+}
