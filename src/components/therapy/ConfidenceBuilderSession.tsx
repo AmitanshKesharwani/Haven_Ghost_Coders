@@ -9,6 +9,28 @@ import { AVAILABLE_VOICES, type VoiceOption } from '../../services/speechService
 import { useAuth } from '../auth/AuthProvider';
 import { toast } from 'sonner';
 
+// ── Browser TTS helper (no Firebase dependency) ──────────────────────────────
+function speakWithBrowserTTS(
+  text: string,
+  languageCode: string,
+  speakingRate: number = 1.0,
+  onEnd?: () => void
+): void {
+  if (!window.speechSynthesis) { console.warn('SpeechSynthesis not supported'); onEnd?.(); return; }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = languageCode;
+  utterance.rate = speakingRate;
+  const voices = window.speechSynthesis.getVoices();
+  const match = voices.find(v => v.lang === languageCode)
+    ?? voices.find(v => v.lang.startsWith(languageCode.split('-')[0]))
+    ?? null;
+  if (match) utterance.voice = match;
+  utterance.onend = () => onEnd?.();
+  utterance.onerror = (e) => { console.error('SpeechSynthesis error:', e); onEnd?.(); };
+  window.speechSynthesis.speak(utterance);
+}
+
 interface ConfidenceStep {
   id: number;
   title: string;
@@ -198,44 +220,12 @@ export default function ConfidenceBuilderSession() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const speakText = async (text: string) => {
-    try {
-      // Use Firebase TTS for better multilingual support
-      const { httpsCallable, getFunctions } = await import('firebase/functions');
-      const functions = getFunctions();
-      const synthesizeSpeech = httpsCallable<{ 
-        text: string; 
-        languageCode?: string; 
-        voiceName?: string; 
-        speakingRate?: number; 
-      }, { audioBase64: string }>(functions, 'synthesizeSpeech');
-
-      const result = await synthesizeSpeech({
-        text: text,
-        languageCode: selectedVoice.language || 'en-IN',
-        voiceName: selectedVoice.voiceURI || selectedVoice.name,
-        speakingRate: selectedVoice.rate || 1.0,
-      });
-
-      const audioBase64 = result.data.audioBase64;
-      if (audioBase64) {
-        const audio = new Audio(`data:audio/mp3;base64,${audioBase64}`);
-        await audio.play();
-      }
-    } catch (error) {
-      console.error('TTS error:', error);
-      // Fallback to browser TTS
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        const voices = speechSynthesis.getVoices();
-        const matchingVoice = voices.find(v => v.name === selectedVoice.name);
-        if (matchingVoice) {
-          utterance.voice = matchingVoice;
-        }
-        utterance.lang = selectedVoice.language;
-        speechSynthesis.speak(utterance);
-      }
-    }
+  const speakText = (text: string) => {
+    speakWithBrowserTTS(
+      text,
+      selectedVoice.language || 'en-IN',
+      selectedVoice.rate || 1.0
+    );
   };
 
   const handleVoiceResponse = (transcript: string, confidence: number) => {

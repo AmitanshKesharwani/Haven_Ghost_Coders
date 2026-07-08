@@ -1,69 +1,7 @@
 // Browser-Compatible AI Integration (secure function proxy)
 import { analyzeEmotionalContext } from "./emotionAnalysis";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { supabase } from "./supabaseClient";
 import { encryptTransportPayload } from "./transportEncryption";
-
-// Configuration
-const GROQ_API_KEY = (import.meta as any).env.VITE_GROQ_API_KEY as string;
-
-if (!GROQ_API_KEY || GROQ_API_KEY === 'your_groq_api_key_here') {
-  console.error('❌ GROQ API KEY NOT CONFIGURED!');
-}
-
-async function callGroqDirect(userMessage: string, emotionContextString: string): Promise<string> {
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${GROQ_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      max_tokens: 800,
-      messages: [
-        {
-          role: "system",
-          content: `You are Haven, a calm and empathetic mental wellness companion for Indian students.
-You ONLY discuss stress, emotions, and mental wellness.
-You are NOT a therapist and never diagnose.
-If the user seems in crisis, gently suggest these Government of India helplines:
-KIRAN: 1800-599-0019 (Toll-Free, 24/7),
-Tele MANAS: 14416 (Toll-Free, 24/7),
-NIMHANS: 08046110007 (24/7).
-Respond in the same language the user writes in.
-
-CURRENT USER EMOTIONAL STATE:
-${emotionContextString}
-
-If confidence is above 0.7 gently acknowledge the detected emotion in your response.
-If below 0.7 respond with general warmth.
-
-Response style requirements:
-- Sound like a real, caring person (not clinical, not robotic)
-- Use 2-4 short paragraphs, usually 120-220 words
-- Reflect what the user said before giving suggestions
-- Offer one gentle practical next step when appropriate
-- End with one warm, specific follow-up question
-- Avoid generic filler like "I'm here to help" unless contextually needed`
-        },
-        {
-          role: "user",
-          content: userMessage
-        }
-      ]
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Groq fallback failed with status ${response.status}`);
-  }
-
-  const json = await response.json();
-  return (
-    json?.choices?.[0]?.message?.content ??
-    "I am here for you. Can you tell me more about how you are feeling?"
-  );
-}
 
 export interface MentalHealthContext {
   userId: string;
@@ -132,20 +70,10 @@ export class GoogleCloudMentalHealthAI {
 
   private async initializeServices() {
     if (this.isInitialized) return;
-    
-    try {
-      if (!GROQ_API_KEY || GROQ_API_KEY === 'your_groq_api_key_here') {
-        throw new Error('Groq API key not configured');
-      }
-
-      this.model = true;
-
-      this.isInitialized = true;
-      console.log('✅ Groq AI initialized successfully');
-    } catch (error) {
-      console.error('❌ Failed to initialize Groq AI:', error);
-      throw error;
-    }
+    // Supabase Edge Function is now the primary AI path — no API key needed on the client
+    this.model = true;
+    this.isInitialized = true;
+    console.log('✅ AI service initialized (Supabase Edge Function mode)');
   }
 
   // Compatibility method for aiOrchestrator
@@ -234,24 +162,24 @@ export class GoogleCloudMentalHealthAI {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       const emotionContext = await analyzeEmotionalContext(userMessage);
-      const functions = getFunctions();
-      const callCompanion = httpsCallable<
-        { payload: { iv: string; data: string } },
-        { message?: string }
-      >(functions, "generateCompanionResponseSecure");
       const payload = await encryptTransportPayload({
         userMessage,
-        emotionContextString: emotionContext.contextString
+        emotionContextString: emotionContext.contextString,
       });
       let generatedText = "";
       try {
-        const response = await callCompanion({ payload });
+        const { data: fnData, error: fnError } = await supabase.functions.invoke('ai-companion', {
+          body: { payload },
+        });
+        console.log('Supabase invoke data:', fnData);
+        console.log('Supabase invoke error:', fnError);
+        if (fnError) throw fnError;
         generatedText =
-          response.data?.message ??
+          fnData?.message ??
           "I am here for you. Can you tell me more about how you are feeling?";
       } catch (callableError) {
-        console.warn("⚠️ Secure callable failed, using direct Groq fallback:", callableError);
-        generatedText = await callGroqDirect(userMessage, emotionContext.contextString);
+        console.error("⚠️ ai-companion Edge Function failed:", callableError);
+        generatedText = "I'm here for you. It seems like I'm having a little trouble connecting right now — please try again in a moment.";
       }
       
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

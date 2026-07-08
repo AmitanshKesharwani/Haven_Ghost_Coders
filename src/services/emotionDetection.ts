@@ -3,7 +3,7 @@
 // 1. Real-time, client-side analysis via face-api.js (fast, free)
 // 2. On-demand, server-side analysis via Google Cloud Vision (slow, high-accuracy)
 
-import { getFunctions, httpsCallable, Functions } from "firebase/functions";
+import { supabase } from './supabaseClient';
 import * as faceapi from 'face-api.js';
 
 // Existing interfaces
@@ -42,38 +42,13 @@ export interface EmotionDetectionResult {
     };
 }
 
-// Firebase Functions Setup
-let functionsInstance: Functions | null = null;
-try {
-    functionsInstance = getFunctions(); // Use default app
-    // Optional: Connect to emulator in development
-    if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
-        const { connectFunctionsEmulator } = await import('firebase/functions');
-        connectFunctionsEmulator(functionsInstance, 'localhost', 5001);
-        console.log('EmotionDetection: Connected to Functions Emulator');
-    }
-} catch (error) {
-    console.error("EmotionDetection: Failed to initialize Firebase Functions:", error);
-}
-
-// Interface matching the Cloud Function's return type
+// Interface matching the Supabase Edge Function's return type
 interface VisionAnalysisResult {
     faceDetected: boolean;
     emotions: { joy: number; sorrow: number; anger: number; surprise: number; };
     primaryEmotion: string;
     confidence: number;
 }
-
-// Define expected input/output types for the callable function
-type AnalyzeFaceEmotionCallable = ReturnType<typeof httpsCallable<
-    { imageBytes: string }, // Input: base64 image string
-    VisionAnalysisResult // Output: Result from the Cloud Function
->>;
-
-// Create callable reference for on-demand snapshots
-const analyzeSnapshotWithCloud: AnalyzeFaceEmotionCallable | null = functionsInstance
-    ? httpsCallable(functionsInstance, 'analyzeFaceEmotion') as AnalyzeFaceEmotionCallable
-    : null;
 
 
 export class EmotionDetectionService {
@@ -180,10 +155,6 @@ export class EmotionDetectionService {
     async analyzeSnapshot(
         video: HTMLVideoElement
     ): Promise<EmotionDetectionResult> {
-        if (!analyzeSnapshotWithCloud) {
-            throw new Error('Cloud analysis function not available.');
-        }
-
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Unable to create canvas context');
@@ -196,13 +167,15 @@ export class EmotionDetectionService {
         const imageBase64 = imageDataUrl.split(',')[1];
 
         try {
-            console.log("Calling analyzeFaceEmotion Cloud Function...");
-            const visionResult = await analyzeSnapshotWithCloud({ imageBytes: imageBase64 });
-            console.log("Received response from analyzeFaceEmotion:", visionResult.data);
-            
-            return this.mapVisionResultToDetectionResult(visionResult.data, {});
+            console.log('Calling analyze-face-emotion Edge Function...');
+            const { data, error } = await supabase.functions.invoke('analyze-face-emotion', {
+                body: { imageBytes: imageBase64 },
+            });
+            if (error) throw error;
+            console.log('Received response from analyze-face-emotion:', data);
+            return this.mapVisionResultToDetectionResult(data as VisionAnalysisResult, {});
         } catch (error) {
-            console.error("Error calling analyzeFaceEmotion function:", error);
+            console.error('Error calling analyze-face-emotion function:', error);
             return this.createDefaultDetectionResult(true, 'error');
         }
     }
@@ -398,19 +371,10 @@ export class EmotionDetectionService {
         return { immediate, therapeutic };
     }
 
-    private async blobToBase64(blob: Blob): Promise<string> {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    }
-
     // Public utility methods
     isServiceAvailable(): boolean {
-        // **FIX**: Changed 'analyzeFaceEmotion' to 'analyzeSnapshotWithCloud'
-        return this.isInitialized && !!navigator.mediaDevices && !!analyzeSnapshotWithCloud;
+        // Cloud analysis now uses supabase.functions.invoke — always available if initialized
+        return this.isInitialized && !!navigator.mediaDevices;
     }
 
     async requestCameraPermission(): Promise<boolean> {

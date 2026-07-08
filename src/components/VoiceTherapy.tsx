@@ -3,10 +3,30 @@ import { Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AVAILABLE_VOICES, type VoiceOption } from '../services/speechServices';
 import { useTheme } from '../contexts/ThemeContext';
-
-import { httpsCallable, getFunctions } from 'firebase/functions';
 import { toast } from 'sonner';
 import { SpeechToTextInput } from './SpeechToTextInput';
+
+// ── Browser TTS helper (no Firebase dependency) ──────────────────────────────
+function speakWithBrowserTTS(
+  text: string,
+  languageCode: string,
+  speakingRate: number = 1.0,
+  onEnd?: () => void
+): void {
+  if (!window.speechSynthesis) { console.warn('SpeechSynthesis not supported'); onEnd?.(); return; }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = languageCode;
+  utterance.rate = speakingRate;
+  const voices = window.speechSynthesis.getVoices();
+  const match = voices.find(v => v.lang === languageCode)
+    ?? voices.find(v => v.lang.startsWith(languageCode.split('-')[0]))
+    ?? null;
+  if (match) utterance.voice = match;
+  utterance.onend = () => onEnd?.();
+  utterance.onerror = (e) => { console.error('SpeechSynthesis error:', e); onEnd?.(); };
+  window.speechSynthesis.speak(utterance);
+}
 
 export default function VoiceTherapy() {
   const { currentTheme } = useTheme();
@@ -134,60 +154,33 @@ export default function VoiceTherapy() {
     }
   };
 
-  const testVoice = async (voice: VoiceOption) => {
+  const testVoice = (voice: VoiceOption) => {
     setTestingVoice(voice.id);
-    
-    try {
-      const functions = getFunctions();
-      const synthesizeSpeech = httpsCallable<{ 
-        text: string; 
-        languageCode?: string; 
-        voiceName?: string; 
-        speakingRate?: number; 
-      }, { audioBase64: string }>(functions, 'synthesizeSpeech');
 
-      // Enhanced test messages for each voice in their native language
-      const testMessages = {
-        'en-IN': `Hello! I'm ${voice.name}, your AI therapy companion. I speak Indian English with warmth and understanding.`,
-        'hi-IN': `नमस्ते! मैं ${voice.name} हूं, आपका AI चिकित्सा साथी। मैं आपकी मानसिक स्वास्थ्य यात्रा में सहायता करूंगा।`,
-        'en-GB': `Hello! I'm ${voice.name}, your British AI companion. I'm here to support your wellbeing journey.`,
-        'en-US': `Hi there! I'm ${voice.name}, your American AI companion. I'm excited to help you on your wellness journey.`,
-        'bn-IN': `নমস্কার! আমি ${voice.name}, আপনার বাংলা AI সঙ্গী। আমি আপনার মানসিক স্বাস্থ্য যাত্রায় সহায়তা করব।`,
-        'mr-IN': `नमस्कार! मी ${voice.name} आहे, तुमचा मराठी AI साथी। मी तुमच्या मानसिक आरोग्याच्या प्रवासात मदत करेन।`,
-        'ta-IN': `வணக்கம்! நான் ${voice.name}, உங்கள் தமிழ் AI துணை। உங்கள் மன நலப் பயணத்தில் உதவுவேன்.`,
-        'te-IN': `నమస్కారం! నేను ${voice.name}, మీ తెలుగు AI సహచరుడిని। మీ మానసిక ఆరోగ్య ప్రయాణంలో సహాయం చేస్తాను.`,
-        'gu-IN': `નમસ્તે! હું ${voice.name} છું, તમારો ગુજરાતી AI સાથી। હું તમારી માનસિક સ્વાસ્થ્ય યાત્રામાં મદદ કરીશ.`,
-        'kn-IN': `ನಮಸ್ಕಾರ! ನಾನು ${voice.name}, ನಿಮ್ಮ ಕನ್ನಡ AI ಸಹಚರ। ನಿಮ್ಮ ಮಾನಸಿಕ ಆರೋಗ್ಯ ಪ್ರಯಾಣದಲ್ಲಿ ಸಹಾಯ ಮಾಡುತ್ತೇನೆ.`,
-        'ml-IN': `നമസ്കാരം! ഞാൻ ${voice.name}, നിങ്ങളുടെ മലയാളം AI കൂട്ടാളി। നിങ്ങളുടെ മാനസികാരോഗ്യ യാത്രയിൽ സഹായിക്കും.`
-      };
+    const testMessages: Record<string, string> = {
+      'en-IN': `Hello! I'm ${voice.name}, your AI therapy companion. I speak Indian English with warmth and understanding.`,
+      'hi-IN': `नमस्ते! मैं ${voice.name} हूं, आपका AI चिकित्सा साथी। मैं आपकी मानसिक स्वास्थ्य यात्रा में सहायता करूंगा।`,
+      'en-GB': `Hello! I'm ${voice.name}, your British AI companion. I'm here to support your wellbeing journey.`,
+      'en-US': `Hi there! I'm ${voice.name}, your American AI companion. I'm excited to help you on your wellness journey.`,
+      'bn-IN': `নমস্কার! আমি ${voice.name}, আপনার বাংলা AI সঙ্গী।`,
+      'mr-IN': `नमस्कार! मी ${voice.name} आहे, तुमचा मराठी AI साथी।`,
+      'ta-IN': `வணக்கம்! நான் ${voice.name}, உங்கள் தமிழ் AI துணை.`,
+      'te-IN': `నమస్కారం! నేను ${voice.name}, మీ తెలుగు AI సహచరుడిని.`,
+      'gu-IN': `નમસ્તે! હું ${voice.name} છું, તમારો ગુજરાતી AI સાથી.`,
+      'kn-IN': `ನಮಸ್ಕಾರ! ನಾನು ${voice.name}, ನಿಮ್ಮ ಕನ್ನಡ AI ಸಹಚರ.`,
+      'ml-IN': `നമസ്കാരം! ഞാൻ ${voice.name}, നിങ്ങളുടെ മലയാളം AI കൂട്ടാളി.`,
+    };
+    const testMessage = testMessages[voice.language] ?? testMessages['en-IN']!;
 
-      const testMessage = testMessages[voice.language as keyof typeof testMessages] || testMessages['en-IN'];
+    console.log(`🎤 Testing ${voice.name} via browser SpeechSynthesis (${voice.language})`);
+    toast.success(`🎤 Playing ${voice.name} in ${voice.accent}`);
 
-      console.log(`🎤 Testing ${voice.name} with Google Chirp 3 HD (${voice.language})`);
-
-      const result = await synthesizeSpeech({
-        text: testMessage,
-        languageCode: voice.language,
-        voiceName: voice.voiceURI || voice.name,
-        speakingRate: voice.rate || 1.0
-      });
-
-      const audioBase64 = result.data.audioBase64;
-      
-      if (audioBase64) {
-        console.log(`✅ Received Chirp 3 HD audio for ${voice.name}`);
-        await playBase64Audio(audioBase64);
-        toast.success(`🎤 Playing ${voice.name} in ${voice.accent}`);
-      } else {
-        console.warn(`⚠️ No audio data received for ${voice.name}`);
-        toast.error(`Could not generate audio for ${voice.name}`);
-        setTestingVoice(null);
-      }
-    } catch (error: any) {
-      console.error(`❌ Error testing ${voice.name}:`, error);
-      toast.error(`Failed to test ${voice.name}: ${error.message || 'Unknown error'}`);
-      setTestingVoice(null);
-    }
+    speakWithBrowserTTS(
+      testMessage,
+      voice.language,
+      voice.rate ?? 1.0,
+      () => setTestingVoice(null)
+    );
   };
 
   return (

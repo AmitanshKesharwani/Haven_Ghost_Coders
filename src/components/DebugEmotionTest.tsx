@@ -3,7 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { ArrowLeft, TestTube, CheckCircle, XCircle, AlertCircle, Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { supabase } from '../services/supabaseClient';
 
 interface DebugEmotionTestProps {
   navigateTo?: (screen: string) => void;
@@ -49,40 +49,41 @@ export const DebugEmotionTest: React.FC<DebugEmotionTestProps> = ({ navigateTo }
       updateResult('camera', 'error', `Camera failed: ${error.message}`, error);
     }
 
-    // Test 2: Firebase Functions Connection
+    // Test 2: Supabase Edge Function Connection
     try {
-      console.log('🧪 Testing Firebase Functions...');
-      const functions = getFunctions();
-      updateResult('firebase-init', 'success', 'Firebase Functions initialized');
+      console.log('🧪 Testing Supabase Edge Function...');
+      updateResult('supabase-init', 'success', 'Supabase client initialized');
 
-      // Test 3: Vision Function Availability
+      // Test 3: analyze-face-emotion Edge Function
       try {
-        console.log('🧪 Testing Vision Function...');
-        const analyzeFaceEmotion = httpsCallable(functions, 'analyzeFaceEmotion');
-        
+        console.log('🧪 Testing analyze-face-emotion Edge Function...');
+
         // Create a test image (1x1 pixel base64)
         const testImageBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-        
-        console.log('🧪 Calling analyzeFaceEmotion with test image...');
-        const result = await analyzeFaceEmotion({ imageBytes: testImageBase64 });
-        
-        console.log('✅ Vision function response:', result);
-        updateResult('vision-function', 'success', 'Vision function callable', result.data);
-        
-      } catch (visionError) {
-        console.error('❌ Vision function test failed:', visionError);
+
+        console.log('🧪 Calling analyze-face-emotion with test image...');
+        const { data: result, error: fnError } = await supabase.functions.invoke('analyze-face-emotion', {
+          body: { imageBytes: testImageBase64 },
+        });
+
+        if (fnError) throw fnError;
+        console.log('✅ Edge Function response:', result);
+        updateResult('vision-function', 'success', 'analyze-face-emotion callable', result);
+
+      } catch (visionError: any) {
+        console.error('❌ Vision Edge Function test failed:', visionError);
         updateResult('vision-function', 'error', `Vision function failed: ${visionError.message}`, visionError);
       }
 
-    } catch (firebaseError) {
-      console.error('❌ Firebase test failed:', firebaseError);
-      updateResult('firebase-init', 'error', `Firebase failed: ${firebaseError.message}`, firebaseError);
+    } catch (supabaseError: any) {
+      console.error('❌ Supabase test failed:', supabaseError);
+      updateResult('supabase-init', 'error', `Supabase failed: ${supabaseError.message}`, supabaseError);
     }
 
     // Test 4: Environment Variables
     const envTests = [
-      { key: 'VITE_FIREBASE_PROJECT_ID', value: import.meta.env.VITE_FIREBASE_PROJECT_ID },
-      { key: 'VITE_FIREBASE_API_KEY', value: import.meta.env.VITE_FIREBASE_API_KEY },
+      { key: 'VITE_SUPABASE_URL', value: import.meta.env.VITE_SUPABASE_URL },
+      { key: 'VITE_SUPABASE_ANON_KEY', value: import.meta.env.VITE_SUPABASE_ANON_KEY },
       { key: 'VITE_GOOGLE_CLOUD_VISION_API_KEY', value: import.meta.env.VITE_GOOGLE_CLOUD_VISION_API_KEY }
     ];
 
@@ -142,15 +143,15 @@ export const DebugEmotionTest: React.FC<DebugEmotionTestProps> = ({ navigateTo }
       // Stop camera
       stream.getTracks().forEach(track => track.stop());
 
-      // Call Firebase Function
-      const functions = getFunctions();
-      const analyzeFaceEmotion = httpsCallable(functions, 'analyzeFaceEmotion');
-      
-      console.log('🧠 Analyzing real image...');
-      const result = await analyzeFaceEmotion({ imageBytes: imageBase64 });
-      
-      console.log('✅ Real image analysis result:', result.data);
-      updateResult('real-image-test', 'success', 'Real image analysis successful', result.data);
+      // Call Supabase Edge Function
+      console.log('🧠 Analyzing real image via analyze-face-emotion...');
+      const { data: result, error: fnError } = await supabase.functions.invoke('analyze-face-emotion', {
+        body: { imageBytes: imageBase64 },
+      });
+      if (fnError) throw fnError;
+
+      console.log('✅ Real image analysis result:', result);
+      updateResult('real-image-test', 'success', 'Real image analysis successful', result);
       
       toast.success('Real image test completed successfully!');
 
@@ -259,7 +260,7 @@ export const DebugEmotionTest: React.FC<DebugEmotionTestProps> = ({ navigateTo }
         <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
           <h3 className="font-semibold text-blue-800 mb-3">Debug Instructions</h3>
           <div className="text-sm text-blue-700 space-y-2">
-            <p><strong>1. Run Debug Tests:</strong> Check system compatibility and Firebase connection</p>
+            <p><strong>1. Run Debug Tests:</strong> Check system compatibility and Supabase connection</p>
             <p><strong>2. Test Real Image:</strong> Capture and analyze an actual camera frame</p>
             <p><strong>3. Check Console:</strong> Open browser console (F12) for detailed logs</p>
             <p><strong>4. Verify Results:</strong> Look for specific error messages in the test results</p>
@@ -271,9 +272,9 @@ export const DebugEmotionTest: React.FC<DebugEmotionTestProps> = ({ navigateTo }
           <h3 className="font-semibold text-yellow-800 mb-3">Common Issues & Solutions</h3>
           <div className="text-sm text-yellow-700 space-y-2">
             <p><strong>Camera Access Denied:</strong> Check browser permissions and use HTTPS</p>
-            <p><strong>Firebase Function Error:</strong> Ensure functions are deployed and API keys are correct</p>
+            <p><strong>Edge Function Error:</strong> Ensure Supabase functions are deployed and API keys are correct</p>
             <p><strong>Vision API Error:</strong> Check Google Cloud Vision API is enabled and has quota</p>
-            <p><strong>Authentication Error:</strong> Make sure user is logged in to Firebase</p>
+            <p><strong>Authentication Error:</strong> Make sure user is logged in</p>
           </div>
         </Card>
       </div>

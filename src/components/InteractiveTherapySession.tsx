@@ -2,9 +2,29 @@ import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Play, Pause, Home, ArrowRight, CheckCircle, Heart, Volume2 } from 'lucide-react';
 import { AVAILABLE_VOICES, type VoiceOption } from '../services/speechServices';
 import { useTheme } from '../contexts/ThemeContext';
-
-import { httpsCallable, getFunctions } from 'firebase/functions';
 import { toast } from 'sonner';
+
+// ── Browser TTS helper ────────────────────────────────────────────────────────
+function speakWithBrowserTTS(
+  text: string,
+  languageCode: string,
+  speakingRate: number = 1.0,
+  onEnd?: () => void
+): void {
+  if (!window.speechSynthesis) { console.warn('SpeechSynthesis not supported'); onEnd?.(); return; }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = languageCode;
+  utterance.rate = speakingRate;
+  const voices = window.speechSynthesis.getVoices();
+  const match = voices.find(v => v.lang === languageCode)
+    ?? voices.find(v => v.lang.startsWith(languageCode.split('-')[0]))
+    ?? null;
+  if (match) utterance.voice = match;
+  utterance.onend = () => onEnd?.();
+  utterance.onerror = (e) => { console.error('SpeechSynthesis error:', e); onEnd?.(); };
+  window.speechSynthesis.speak(utterance);
+}
 
 interface TherapyExercise {
   id: string;
@@ -50,17 +70,6 @@ export default function InteractiveTherapySession({ exercise, selectedVoice, onE
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
-
-  // Firebase functions
-  const functions = getFunctions();
-  const synthesizeSpeech = httpsCallable<{ 
-    text: string; 
-    languageCode?: string; 
-    voiceName?: string; 
-    speakingRate?: number; 
-  }, { audioBase64: string }>(functions, 'synthesizeSpeech');
-  
-  const transcribeAudio = httpsCallable(functions, 'transcribeAudio');
 
   // Step content for each exercise
   const stepContent = {
@@ -203,26 +212,16 @@ export default function InteractiveTherapySession({ exercise, selectedVoice, onE
            `Step ${step}: Continue with your ${exercise.title} journey.`;
   };
 
-  const speakMessage = async (message: string) => {
-    try {
+  const speakMessage = (message: string): Promise<void> => {
+    return new Promise((resolve) => {
       setIsPlaying(true);
-      const result = await synthesizeSpeech({
-        text: message,
-        languageCode: selectedVoice.language,
-        voiceName: selectedVoice.voiceURI || selectedVoice.name,
-        speakingRate: selectedVoice.rate || 1.0
-      });
-
-      const audioBase64 = result.data.audioBase64;
-      if (audioBase64) {
-        await playBase64Audio(audioBase64);
-      }
-    } catch (error) {
-      console.error('Error speaking message:', error);
-      toast.error('Voice playback failed');
-    } finally {
-      setIsPlaying(false);
-    }
+      speakWithBrowserTTS(
+        message,
+        selectedVoice.language,
+        selectedVoice.rate ?? 1.0,
+        () => { setIsPlaying(false); resolve(); }
+      );
+    });
   };
 
   const playBase64Audio = async (base64String: string) => {
@@ -259,102 +258,73 @@ export default function InteractiveTherapySession({ exercise, selectedVoice, onE
     }
   };
 
-  const startListening = async () => {
-    try {
-      setIsListening(true);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
+  const startListening = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      toast.error('Speech recognition is not supported in this browser');
+      return;
+    }
+    setIsListening(true);
+    toast.info('🎤 Listening... Speak now!');
 
-      const mimeType = 'audio/webm;codecs=opus';
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
-      audioChunksRef.current = [];
+    const recognition = new SR();
+    recognition.lang = selectedVoice.language;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        stream.getTracks().forEach(track => track.stop());
-        
-        if (audioBlob.size > 0) {
-          await processVoiceInput(audioBlob);
-        }
-        setIsListening(false);
-      };
-
-      mediaRecorderRef.current.start();
-      toast.info('🎤 Listening... Speak now!');
-    } catch (error) {
-      console.error('Error starting voice recording:', error);
-      toast.error('Microphone access failed');
+    recognition.onresult = async (e: any) => {
+      const result = e.results[0]?.[0];
+      const transcript = result?.transcript ?? '';
       setIsListening(false);
-    }
-  };
-
-  const stopListening = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
-  };
-
-  const processVoiceInput = async (audioBlob: Blob) => {
-    try {
-      const audioBase64 = await blobToBase64(audioBlob);
-      const result = await transcribeAudio({
-        audioBytes: audioBase64,
-        languageCode: selectedVoice.language,
-        alternativeLanguageCodes: ['en-IN'],
-        sampleRateHertz: 48000
-      });
-
-      const resultData = result.data as { transcription: string; confidence: number };
-      const transcript = resultData.transcription;
-
       if (transcript) {
-        const analysis = analyzeResponse(transcript);
-        setUserResponses(prev => [...prev, analysis]);
-        await provideFeedback(analysis);
-        
-        // Move to next step or complete session
-        if (currentStep < exercise.steps) {
-          setTimeout(() => {
-            setCurrentStep(prev => prev + 1);
-            setSessionProgress(((currentStep + 1) / exercise.steps) * 100);
-            nextStep();
-          }, 3000);
-        } else {
-          setTimeout(() => {
-            completeSession();
-          }, 3000);
-        }
+        await processTranscript(transcript);
       } else {
         toast.error('Could not understand your response. Please try again.');
         setWaitingForResponse(true);
+      }
+    };
+
+    recognition.onerror = (e: any) => {
+      console.error('SpeechRecognition error:', e.error);
+      toast.error(`Voice input failed: ${e.error}`);
+      setIsListening(false);
+      setWaitingForResponse(true);
+    };
+
+    recognition.onend = () => setIsListening(false);
+    recognition.start();
+
+    // Store stop handle on ref so stopListening can cancel
+    mediaRecorderRef.current = { stop: () => recognition.stop() } as any;
+  };
+
+  const stopListening = () => {
+    (mediaRecorderRef.current as any)?.stop?.();
+    setIsListening(false);
+  };
+
+  const processTranscript = async (transcript: string) => {
+    try {
+      const analysis = analyzeResponse(transcript);
+      setUserResponses(prev => [...prev, analysis]);
+      await provideFeedback(analysis);
+
+      if (currentStep < exercise.steps) {
+        setTimeout(() => {
+          setCurrentStep(prev => prev + 1);
+          setSessionProgress(((currentStep + 1) / exercise.steps) * 100);
+          nextStep();
+        }, 3000);
+      } else {
+        setTimeout(() => {
+          completeSession();
+        }, 3000);
       }
     } catch (error) {
       console.error('Error processing voice input:', error);
       toast.error('Failed to process your response');
       setWaitingForResponse(true);
     }
-  };
-
-  const blobToBase64 = (blob: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(',')[1];
-        resolve(base64 || '');
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
   };
 
   const analyzeResponse = (transcript: string): VoiceAnalysis => {

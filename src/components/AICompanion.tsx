@@ -11,9 +11,8 @@ import { useAuth } from './auth/AuthProvider';
 import { useFirebaseSession } from '../hooks/useFirebaseSession';
 
 import { emotionDetection } from '../services/emotionDetection';
-import { getFunctions, httpsCallable } from "firebase/functions";
 import { toast } from 'sonner';
-import { type ChatConversation, type ChatMessage } from '../services/firebaseService'; // Import types
+import { type ChatConversation, type ChatMessage } from '../services/supabaseService';
 import { createConversation, addMessage, getConversationMessages, getUserConversations, clearAllChatHistory } from '../services/localChatStorage';
 import { X } from 'lucide-react';
 import { AVAILABLE_VOICES, type VoiceOption } from '../services/speechServices';
@@ -43,42 +42,51 @@ const stripMarkdownForVoice = (text: string): string => {
     .replace(/\s+/g, ' ')
     .trim();
 };
-// --- Helper function to convert Blob to Base64 ---
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      // Remove the data URL prefix (e.g., "data:audio/webm;codecs=opus;base64,")
-      const base64String = (reader.result as string).split(',')[1];
-      if (base64String) {
-        resolve(base64String);
-      } else {
-        reject(new Error("Failed to convert blob to base64: result is empty"));
-      }
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
-// --- End Helper ---
-const functions = getFunctions(); // Use default Firebase app
 
-// Configure functions for development if needed
-if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
-  // Only connect to emulator in development if explicitly enabled
-  try {
-    const { connectFunctionsEmulator } = await import('firebase/functions');
-    connectFunctionsEmulator(functions, 'localhost', 5001);
-    console.log('Connected to Firebase Functions Emulator');
-  } catch (error) {
-    console.log('Firebase Functions Emulator not available or already connected');
-  }
+// ── Browser TTS helper (replaces Firebase synthesizeSpeech) ─────────────────
+function speakWithBrowserTTS(
+  text: string,
+  languageCode: string,
+  speakingRate: number = 1.0,
+  onEnd?: () => void
+): void {
+  if (!window.speechSynthesis) { console.warn('SpeechSynthesis not supported'); onEnd?.(); return; }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = languageCode;
+  utterance.rate = speakingRate;
+  const voices = window.speechSynthesis.getVoices();
+  const match = voices.find(v => v.lang === languageCode)
+    ?? voices.find(v => v.lang.startsWith(languageCode.split('-')[0]))
+    ?? null;
+  if (match) utterance.voice = match;
+  utterance.onend = () => onEnd?.();
+  utterance.onerror = (e) => { console.error('SpeechSynthesis error:', e); onEnd?.(); };
+  window.speechSynthesis.speak(utterance);
 }
 
-const transcribeAudio = httpsCallable<{ audioBytes: string; languageCode?: string; sampleRateHertz?: number }, { transcription: string; confidence: number }>(functions, 'transcribeAudio');
-const synthesizeSpeech = httpsCallable<{ text: string; languageCode?: string; voiceName?: string; speakingRate?: number }, { audioBase64: string }>(functions, 'synthesizeSpeech');
-
-// Test function availability removed - not used
+// ── Browser STT helper (replaces Firebase transcribeAudio) ──────────────────
+function transcribeWithBrowserSTT(
+  languageCode: string,
+  onResult: (transcript: string, confidence: number) => void,
+  onError: (err: string) => void,
+  onEnd?: () => void
+): () => void {
+  const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  if (!SR) { onError('SpeechRecognition not supported in this browser'); return () => {}; }
+  const recognition = new SR();
+  recognition.lang = languageCode;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onresult = (e: any) => {
+    const result = e.results[0]?.[0];
+    onResult(result?.transcript ?? '', result?.confidence ?? 0);
+  };
+  recognition.onerror = (e: any) => onError(e.error ?? 'SpeechRecognition error');
+  if (onEnd) recognition.onend = onEnd;
+  recognition.start();
+  return () => recognition.stop();
+}
 
 // Simple markdown renderer component
 const MarkdownRenderer = ({ content }: { content: string }) => {
@@ -226,71 +234,14 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
   const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for scrolling
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const messageListenerUnsubscribeRef = useRef<(() => void) | null>(null); // Ref for message listener
-
-  // --- Function to play Base64 Audio using Web Audio API ---
-  const playBase64Audio = async (base64String: string) => {
-    try {
-      // Ensure AudioContext is available
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const audioContext = audioContextRef.current;
-
-      // Resume AudioContext if suspended (required by some browsers)
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
-
-      // Stop any currently playing audio
-      if (audioSourceRef.current) {
-        audioSourceRef.current.stop();
-      }
-
-      // Decode the Base64 string to ArrayBuffer
-      const binaryString = window.atob(base64String);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
-
-      // Create an AudioBufferSourceNode
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
-
-      // Play the audio
-      setIsVoicePlaying(true);
-      source.start(0);
-      audioSourceRef.current = source;
-
-      // Handle end of playback
-      source.onended = () => {
-        setIsVoicePlaying(false);
-        audioSourceRef.current = null;
-        console.log("Audio playback finished.");
-      };
-    } catch (error) {
-      console.error("Error playing base64 audio:", error);
-      toast.error("Failed to play AI voice response.");
-      setIsVoicePlaying(false); // Ensure state resets on error
-    }
-  };
 
   // --- REVISED stopVoiceResponse function ---
   const stopVoiceResponse = () => {
     try {
-      if (audioSourceRef.current) {
-        audioSourceRef.current.stop(); // Stop Web Audio playback
-        // onended event will set isVoicePlaying to false
-        console.log("Audio playback stopped by user.");
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
-      // Keep original check just in case legacy TTS is somehow active
-      
       setIsVoicePlaying(false); // Force state update
     } catch (error) {
       console.error('Error stopping voice:', error);
@@ -381,28 +332,16 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
 
     try {
       const cleanMessage = stripMarkdownForVoice(textToRead);
-      console.log(`Calling synthesizeSpeech for Read Aloud (Detected: ${detectedLanguageName}, Code: ${languageCode})...`);
-
+      console.log(`Using browser TTS for Read Aloud (Lang: ${languageCode})...`);
       setIsVoicePlaying(true);
-
-      const result = await synthesizeSpeech({
-        text: cleanMessage,
-        languageCode: selectedVoice.language, // Use selected voice language
-        voiceName: selectedVoice.voiceURI, // Use Chirp3 HD voice
-        speakingRate: selectedVoice.rate, // Use selected voice rate
-      });
-
-      const audioBase64 = result.data.audioBase64;
-      if (audioBase64) {
-        console.log("Received synthesized audio for Read Aloud, attempting playback...");
-        await playBase64Audio(audioBase64);
-      } else {
-        console.warn("Synthesize speech returned no audio data for Read Aloud.");
-        toast.error("Could not generate audio for this message.");
-        setIsVoicePlaying(false);
-      }
+      speakWithBrowserTTS(
+        cleanMessage,
+        selectedVoice.language,
+        selectedVoice.rate,
+        () => setIsVoicePlaying(false)
+      );
     } catch (error: any) {
-      console.error("Error during Read Aloud TTS call or playback:", error);
+      console.error("Error during Read Aloud TTS:", error);
       toast.error(`AI Voice failed: ${error.message || 'Could not synthesize speech'}`);
       setIsVoicePlaying(false);
     }
@@ -430,190 +369,97 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
   const handleVoiceInput = async () => {
     if (isVoiceMode) {
       // Stop recording
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        mediaRecorderRef.current.stop(); // This triggers the 'ondataavailable' and 'onstop' events
+      if (mediaRecorderRef.current && (mediaRecorderRef.current as any).stop) {
+        (mediaRecorderRef.current as any).stop();
       }
       setIsVoiceMode(false);
       console.log('Voice recording stopped manually.');
-      // Transcription will happen in the 'onstop' handler
       return;
     }
 
-    // Start recording
     try {
-      // Request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          // sampleRate: 16000, // Optional: Specify sample rate if needed by STT config
-        }
-      });
+      // --- Determine Language Codes ---
+      const activeUserData = userProfile || userData;
+      const userLanguagePref = (activeUserData?.preferences as any)?.language || 'mixed';
 
-      // --- Determine MIME type and check support ---
-      // Opus in WebM is generally well-supported and efficient
-      const mimeType = 'audio/webm;codecs=opus';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        console.error(`${mimeType} is not supported on this browser.`);
-        alert(`Audio recording format (${mimeType}) not supported. Please try a different browser.`);
-        return;
+      let languageCode = 'en-IN'; // Default primary
+
+      const prefLower = userLanguagePref.toLowerCase();
+      if (prefLower.startsWith('hi')) { // Hindi
+        languageCode = 'hi-IN';
+      } else if (prefLower.startsWith('en')) { // English
+        languageCode = 'en-IN';
+      } else if (prefLower.startsWith('bn')) { // Bengali
+        languageCode = 'bn-IN';
+      } else if (prefLower.startsWith('mr')) { // Marathi
+        languageCode = 'mr-IN';
+      } else if (prefLower.startsWith('te')) { // Telugu
+        languageCode = 'te-IN';
+      } else if (prefLower.startsWith('ta')) { // Tamil
+        languageCode = 'ta-IN';
+      } else if (prefLower.startsWith('gu')) { // Gujarati
+        languageCode = 'gu-IN';
+      } else if (prefLower.startsWith('kn')) { // Kannada
+        languageCode = 'kn-IN';
+      } else if (prefLower.startsWith('ml')) { // Malayalam
+        languageCode = 'ml-IN';
+      } else if (prefLower.startsWith('ur')) { // Urdu
+        languageCode = 'ur-IN';
+      } else if (prefLower.startsWith('pa')) { // Punjabi
+        languageCode = 'pa-IN';
+      } else if (prefLower.startsWith('or')) { // Odia
+        languageCode = 'or-IN';
+      } else if (prefLower.startsWith('as')) { // Assamese
+        languageCode = 'as-IN';
+      } else { // 'mixed' or default
+        languageCode = 'en-IN'; 
       }
-      // ---
+      // --- End Language Code Determination ---
 
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
-      audioChunksRef.current = []; // Clear previous chunks
+      console.log(`Using browser STT (Lang: ${languageCode})...`);
+      setIsVoiceMode(true);
+      setInputValue("Listening... / सुन रहा हूँ..."); // Update placeholder
 
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorderRef.current.onstop = async () => {
-        console.log('Recording stopped, processing audio...');
-        // Combine audio chunks into a single Blob
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-
-        // Stop the microphone stream tracks
-        stream.getTracks().forEach(track => track.stop());
-
-        if (audioBlob.size === 0) {
-          console.log("No audio data recorded.");
-          return; // Don't transcribe if no audio
-        }
-
-        try {
-          setIsTyping(true); // Show typing indicator while processing
-          setInputValue("Processing voice..."); // Indicate processing
-
-          // Convert Blob to Base64
-          const audioBase64 = await blobToBase64(audioBlob);
-          // --- Determine Language Codes ---
-          const activeUserData = userProfile || userData;
-          const userLanguagePref = (activeUserData?.preferences as any)?.language || 'mixed';
-
-          let languageCode = 'en-IN'; // Default primary
-          let alternativeLanguageCodes: string[] = ['hi-IN']; // Default secondary
-
-          const prefLower = userLanguagePref.toLowerCase();
-          if (prefLower.startsWith('hi')) { // Hindi
-            languageCode = 'hi-IN';
-            alternativeLanguageCodes = ['en-IN'];
-          } else if (prefLower.startsWith('en')) { // English
-            languageCode = 'en-IN';
-            alternativeLanguageCodes = ['hi-IN'];
-          } else if (prefLower.startsWith('bn')) { // Bengali
-            languageCode = 'bn-IN';
-            alternativeLanguageCodes = ['en-IN'];
-          } else if (prefLower.startsWith('mr')) { // Marathi
-            languageCode = 'mr-IN';
-            alternativeLanguageCodes = ['en-IN', 'hi-IN'];
-          } else if (prefLower.startsWith('te')) { // Telugu
-            languageCode = 'te-IN';
-            alternativeLanguageCodes = ['en-IN'];
-          } else if (prefLower.startsWith('ta')) { // Tamil
-            languageCode = 'ta-IN';
-            alternativeLanguageCodes = ['en-IN'];
-          } else if (prefLower.startsWith('gu')) { // Gujarati
-            languageCode = 'gu-IN';
-            alternativeLanguageCodes = ['en-IN', 'hi-IN'];
-          } else if (prefLower.startsWith('kn')) { // Kannada
-            languageCode = 'kn-IN';
-            alternativeLanguageCodes = ['en-IN'];
-          } else if (prefLower.startsWith('ml')) { // Malayalam
-            languageCode = 'ml-IN';
-            alternativeLanguageCodes = ['en-IN'];
-          } else if (prefLower.startsWith('ur')) { // Urdu
-            languageCode = 'ur-IN';
-            alternativeLanguageCodes = ['en-IN', 'hi-IN'];
-          } else if (prefLower.startsWith('pa')) { // Punjabi
-            languageCode = 'pa-IN';
-            alternativeLanguageCodes = ['en-IN', 'hi-IN'];
-          } else if (prefLower.startsWith('or')) { // Odia
-            languageCode = 'or-IN';
-            alternativeLanguageCodes = ['en-IN'];
-          } else if (prefLower.startsWith('as')) { // Assamese
-            languageCode = 'as-IN';
-            alternativeLanguageCodes = ['en-IN', 'bn-IN'];
-          } else { // 'mixed' or default
-            languageCode = 'en-IN'; 
-            alternativeLanguageCodes = ['hi-IN'];
-          }
-          // --- End Language Code Determination ---
-
-          console.log(`Calling transcribeAudio function (Lang: ${languageCode}, Alts: [${alternativeLanguageCodes.join(', ')}])...`);
-
-          // // Determine language code
-          // const activeUserData = userProfile || userData;
-          // const userLanguage = (activeUserData?.preferences as any)?.language || (activeUserData?.preferences as any)?.preferredLanguage || 'mixed';
-          // const languageCode = userLanguage === 'hindi' ? 'hi-IN' : 'en-IN';
-
-          // // Call the Cloud Function
-          // console.log(`Calling transcribeAudio function (Lang: ${languageCode})...`);
-          // console.log('Audio data size:', audioBase64.length, 'characters');
-
-          const result = await transcribeAudio({
-            audioBytes: audioBase64,
-            languageCode: languageCode,
-            sampleRateHertz: 48000 // Add explicit sample rate
-          });
-
-          console.log('Cloud Function result:', result);
-          const transcript = result.data.transcription;
-          const confidence = result.data.confidence;
-
+      const stopSTT = transcribeWithBrowserSTT(
+        languageCode,
+        (transcript, confidence) => {
           console.log(`Transcription received (Conf: ${confidence.toFixed(2)}):`, transcript);
-
           if (transcript) {
             setInputValue(transcript);
-            // Optional: Automatically send the message after transcription
-            // await handleSendMessage({ transcript, confidence }); // Pass analysis if needed by handleSendMessage
           } else {
-            setInputValue(""); // Clear processing message if no transcript
+            setInputValue("");
             toast.info("Could not understand audio, please try speaking clearly.");
           }
-
-        } catch (error: any) {
-          console.error("Error during transcription Cloud Function call:", error);
-          console.error("Error details:", {
-            code: error.code,
-            message: error.message,
-            details: error.details
-          });
-
-          let errorMessage = 'Transcription failed';
-          if (error.code === 'functions/not-found') {
-            errorMessage = 'Speech-to-text service not available. Please ensure Firebase Functions are deployed.';
-          } else if (error.code === 'functions/unauthenticated') {
-            errorMessage = 'Please sign in to use voice features.';
-          } else if (error.message) {
-            errorMessage = `Transcription failed: ${error.message}`;
+        },
+        (errMsg) => {
+          console.error("STT error:", errMsg);
+          
+          let errorMessage = 'Voice input failed';
+          if (errMsg.includes('not-allowed')) {
+            errorMessage = 'Microphone access denied. Please enable permissions.';
+          } else if (errMsg.includes('no-speech')) {
+            errorMessage = 'No speech detected. Please try again.';
+          } else {
+            errorMessage = `Voice input failed: ${errMsg}`;
           }
-
+          
           toast.error(errorMessage);
-          setInputValue(""); // Clear processing message
-          setIsVoiceMode(false); // Reset voice mode on error
-        } finally {
-          setIsTyping(false); // Ensure typing indicator stops
+          setInputValue("");
+        },
+        () => {
+          setIsVoiceMode(false);
+          setInputValue(prev => prev === "Listening... / सुन रहा हूँ..." ? "" : prev);
         }
-      };
+      );
 
-      // Start recording
-      mediaRecorderRef.current.start();
-      setIsVoiceMode(true);
-      setInputValue("Listening..."); // Update placeholder
-      console.log('Voice recording started...');
+      // Store the stop function so we can cancel it
+      mediaRecorderRef.current = { stop: stopSTT } as any;
 
     } catch (error) {
       console.error('Error starting voice input:', error);
       setIsVoiceMode(false);
       setInputValue("");
-      if (error instanceof Error && error.name === 'NotAllowedError') {
-        toast.error("Microphone access denied. Please enable permissions.");
-      } else {
-        toast.error("Could not start voice recording. Check microphone.");
-      }
+      toast.error("Could not start voice recording. Check microphone.");
     }
   };
   // --- End REVISED handleVoiceInput ---
@@ -806,13 +652,13 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
   // --- EFFECT: Cleanup on unmount ---
   useEffect(() => {
     return () => {
-      // Stop any playing audio
-      if (audioSourceRef.current) {
-        audioSourceRef.current.stop();
+      // Stop any playing voice response
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
-      // Stop voice recording if active
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        mediaRecorderRef.current.stop();
+      // Stop voice recording/STT if active
+      if (mediaRecorderRef.current && (mediaRecorderRef.current as any).stop) {
+        (mediaRecorderRef.current as any).stop();
       }
       // Stop emotion detection if active
       if (isVideoMode) {
@@ -1289,22 +1135,18 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
                                 : 'Hello! I\'m here to support you on your mental health journey.';
                               
                               // Test the voice
-                              const testTTS = async () => {
+                              const testTTS = () => {
                                 try {
                                   setIsVoicePlaying(true);
-                                  const result = await synthesizeSpeech({
-                                    text: testMessage,
-                                    languageCode: voice.language,
-                                    voiceName: voice.voiceURI,
-                                    speakingRate: voice.rate,
-                                  });
-                                  if (result.data.audioBase64) {
-                                    await playBase64Audio(result.data.audioBase64);
-                                  }
+                                  speakWithBrowserTTS(
+                                    testMessage,
+                                    voice.language,
+                                    voice.rate,
+                                    () => setIsVoicePlaying(false)
+                                  );
                                 } catch (error) {
                                   console.error('Voice test failed:', error);
                                   toast.error('Voice test failed');
-                                } finally {
                                   setIsVoicePlaying(false);
                                 }
                               };
