@@ -7,7 +7,7 @@ import VantaBackground from './VantaBackground';
 import AssessmentSystem from './AssessmentSystem';
 import type { Screen } from '../types';
 import { useAuth } from './auth/AuthProvider';
-import { firebaseService } from '../services/firebaseService';
+import { supabaseService } from '../services/supabaseService';
 import { getUserConversations } from '../services/localChatStorage';
 import { toast } from 'sonner';
 

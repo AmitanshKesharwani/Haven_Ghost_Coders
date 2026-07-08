@@ -4,7 +4,8 @@ import { Card } from './ui/card';
 import { Textarea } from './ui/textarea';
 import { ArrowLeft, Save, BookOpen, Clock, Loader2, Edit, Trash2, X, Sparkles, BrainCircuit, Heart, Smile, Meh, Frown, Zap, Lightbulb } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
-import { firebaseService, JournalEntry } from '../services/firebaseService';
+import { supabaseService } from '../services/supabaseService';
+import type { JournalEntry } from '../services/supabaseService';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from 'sonner';
 import type { Screen } from '../types';
@@ -63,7 +64,7 @@ export function Journal({ navigateTo }: JournalProps = {}) {
 
     setLoading(true);
     try {
-      const entries = await firebaseService.getJournalEntries(currentUser.uid, 10);
+      const entries = await supabaseService.getJournalEntries(currentUser.id, 10);
       setSavedEntries(entries);
     } catch (error) {
       console.error('Error loading journal entries:', error);
@@ -81,7 +82,7 @@ export function Journal({ navigateTo }: JournalProps = {}) {
     }
 
     try {
-      const allEntries = await firebaseService.getJournalEntries(currentUser.uid, 50);
+      const allEntries = await supabaseService.getJournalEntries(currentUser.id, 50);
       const demoEntries = allEntries.filter(entry =>
         entry.title.includes('My First Day with Haven') ||
         entry.title.includes('Dealing with Work Stress') ||
@@ -89,7 +90,7 @@ export function Journal({ navigateTo }: JournalProps = {}) {
       );
 
       for (const demoEntry of demoEntries) {
-        await firebaseService.deleteJournalEntry(demoEntry.entryId);
+        await supabaseService.deleteJournalEntry(demoEntry.entryId);
       }
 
       if (demoEntries.length > 0) {
@@ -120,13 +121,13 @@ export function Journal({ navigateTo }: JournalProps = {}) {
           mood: mood as 'very_happy' | 'happy' | 'neutral' | 'sad' | 'very_sad',
           emotions: [mood]
         };
-        await firebaseService.updateJournalEntry(editingEntry.entryId, updates);
+        await supabaseService.updateJournalEntry(editingEntry.entryId, updates);
         entryId = editingEntry.entryId; // Get existing ID
         toast.success('Journal entry updated!');
       } else {
         // Create new entry
         const newEntry: Omit<JournalEntry, 'entryId'> = {
-          userId: currentUser.uid,
+          userId: currentUser.id,
           title: `Journal Entry - ${new Date().toLocaleDateString()}`,
           content: currentEntry.trim(),
           mood: mood as 'very_happy' | 'happy' | 'neutral' | 'sad' | 'very_sad',
@@ -137,13 +138,13 @@ export function Journal({ navigateTo }: JournalProps = {}) {
           updatedAt: new Date()
         };
         // createJournalEntry should return the new entry's ID
-        entryId = await firebaseService.createJournalEntry(newEntry);
+        entryId = await supabaseService.createJournalEntry(newEntry);
         toast.success('Journal entry saved successfully!');
       }
 
       // --- NEW: Log this activity ---
-      await firebaseService.logUserActivity(
-        currentUser.uid,
+      await supabaseService.logUserActivity(
+        currentUser.id,
         'wrote_journal_entry',
         { mood: mood, entryId: entryId }
       );
@@ -186,7 +187,7 @@ export function Journal({ navigateTo }: JournalProps = {}) {
     }
 
     try {
-      await firebaseService.deleteJournalEntry(entryId);
+      await supabaseService.deleteJournalEntry(entryId);
       toast.success('Entry deleted successfully');
       await loadJournalEntries(); // Refresh the list
     } catch (error) {

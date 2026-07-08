@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
-import { firebaseService, JournalEntry, MoodEntry, ChatConversation, ProgressData, AppSettings } from '../services/firebaseService';
-import { createConversation as createLocalConversation, addMessage as addLocalMessage, getConversationMessages as getLocalConversationMessages, getUserConversations as getLocalUserConversations } from '../services/localChatStorage';
+import { supabaseService } from '../services/supabaseService';
+import type { JournalEntry, MoodEntry, ChatConversation, AppSettings } from '../services/supabaseService';
+import {
+  createConversation as createLocalConversation,
+  addMessage as addLocalMessage,
+  getConversationMessages as getLocalConversationMessages,
+  getUserConversations as getLocalUserConversations,
+} from '../services/localChatStorage';
 import { useAuth } from '../components/auth/AuthProvider';
 import { toast } from 'sonner';
 
@@ -8,17 +14,13 @@ export const useFirebaseData = () => {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  // ==================== JOURNAL HOOKS ====================
-  
+  // ── JOURNAL ──────────────────────────────────────────────────────────────
+
   const createJournalEntry = async (entry: Omit<JournalEntry, 'entryId' | 'userId'>) => {
     if (!currentUser) throw new Error('User not authenticated');
-    
     setLoading(true);
     try {
-      const entryId = await firebaseService.createJournalEntry({
-        ...entry,
-        userId: currentUser.uid
-      });
+      const entryId = await supabaseService.createJournalEntry({ ...entry, userId: currentUser.id });
       toast.success('Journal entry saved!');
       return entryId;
     } catch (error) {
@@ -31,10 +33,9 @@ export const useFirebaseData = () => {
 
   const getJournalEntries = async (limitCount?: number) => {
     if (!currentUser) return [];
-    
     setLoading(true);
     try {
-      return await firebaseService.getJournalEntries(currentUser.uid, limitCount);
+      return await supabaseService.getJournalEntries(currentUser.id, limitCount);
     } catch (error) {
       toast.error('Failed to load journal entries');
       throw error;
@@ -46,7 +47,7 @@ export const useFirebaseData = () => {
   const updateJournalEntry = async (entryId: string, updates: Partial<JournalEntry>) => {
     setLoading(true);
     try {
-      await firebaseService.updateJournalEntry(entryId, updates);
+      await supabaseService.updateJournalEntry(entryId, updates);
       toast.success('Journal entry updated!');
     } catch (error) {
       toast.error('Failed to update journal entry');
@@ -59,7 +60,7 @@ export const useFirebaseData = () => {
   const deleteJournalEntry = async (entryId: string) => {
     setLoading(true);
     try {
-      await firebaseService.deleteJournalEntry(entryId);
+      await supabaseService.deleteJournalEntry(entryId);
       toast.success('Journal entry deleted');
     } catch (error) {
       toast.error('Failed to delete journal entry');
@@ -69,17 +70,13 @@ export const useFirebaseData = () => {
     }
   };
 
-  // ==================== MOOD TRACKING HOOKS ====================
+  // ── MOOD ─────────────────────────────────────────────────────────────────
 
   const createMoodEntry = async (entry: Omit<MoodEntry, 'entryId' | 'userId'>) => {
     if (!currentUser) throw new Error('User not authenticated');
-    
     setLoading(true);
     try {
-      const entryId = await firebaseService.createMoodEntry({
-        ...entry,
-        userId: currentUser.uid
-      });
+      const entryId = await supabaseService.createMoodEntry({ ...entry, userId: currentUser.id });
       toast.success('Mood logged!');
       return entryId;
     } catch (error) {
@@ -92,10 +89,9 @@ export const useFirebaseData = () => {
 
   const getMoodEntries = async (_startDate?: Date, _endDate?: Date) => {
     if (!currentUser) return [];
-    
     setLoading(true);
     try {
-      return await firebaseService.getMoodEntries(currentUser.uid, 50);
+      return await supabaseService.getMoodEntries(currentUser.id, 50);
     } catch (error) {
       toast.error('Failed to load mood entries');
       throw error;
@@ -106,26 +102,24 @@ export const useFirebaseData = () => {
 
   const getLatestMoodEntry = async () => {
     if (!currentUser) return null;
-    
     try {
-      return await firebaseService.getLatestMoodEntry(currentUser.uid);
+      return await supabaseService.getLatestMoodEntry(currentUser.id);
     } catch (error) {
       console.error('Failed to get latest mood entry:', error);
       return null;
     }
   };
 
-  // ==================== CHAT HOOKS ====================
+  // ── CHAT ─────────────────────────────────────────────────────────────────
 
   const createConversation = async (conversation: Omit<ChatConversation, 'conversationId' | 'userId'>) => {
     if (!currentUser) throw new Error('User not authenticated');
-    
     setLoading(true);
     try {
       const conversationId = await createLocalConversation(
-        currentUser.uid,
+        currentUser.id,
         conversation.sessionType,
-        conversation.aiPersonality
+        conversation.aiPersonality,
       );
       return conversationId;
     } catch (error) {
@@ -136,7 +130,7 @@ export const useFirebaseData = () => {
     }
   };
 
-  const addMessage = async (message: Omit<import('../services/firebaseService').ChatMessage, 'messageId'>) => {
+  const addMessage = async (message: Omit<import('../services/supabaseService').ChatMessage, 'messageId'>) => {
     setLoading(true);
     try {
       const messageId = await addLocalMessage(
@@ -144,7 +138,7 @@ export const useFirebaseData = () => {
         message.sender,
         message.content,
         message.messageType,
-        message.metadata
+        message.metadata,
       );
       return messageId;
     } catch (error) {
@@ -167,26 +161,21 @@ export const useFirebaseData = () => {
 
   const getUserConversations = async () => {
     if (!currentUser) return [];
-    
     try {
-      return await getLocalUserConversations(currentUser.uid);
+      return await getLocalUserConversations(currentUser.id);
     } catch (error) {
       toast.error('Failed to load conversations');
       throw error;
     }
   };
 
-  // ==================== PROGRESS TRACKING HOOKS ====================
+  // ── PROGRESS ─────────────────────────────────────────────────────────────
 
-  const saveProgressData = async (progress: Omit<ProgressData, 'userId'>) => {
+  const saveProgressData = async (progress: any) => {
     if (!currentUser) throw new Error('User not authenticated');
-    
     setLoading(true);
     try {
-      await firebaseService.saveProgressData({
-        ...progress,
-        userId: currentUser.uid
-      });
+      await supabaseService.saveProgressData({ ...progress, userId: currentUser.id });
       toast.success('Progress saved!');
     } catch (error) {
       toast.error('Failed to save progress');
@@ -198,26 +187,21 @@ export const useFirebaseData = () => {
 
   const getProgressData = async (_startDate?: Date, _endDate?: Date) => {
     if (!currentUser) return [];
-    
     try {
-      return await firebaseService.getProgressData(currentUser.uid, 50);
+      return await supabaseService.getProgressData(currentUser.id, 50);
     } catch (error) {
       toast.error('Failed to load progress data');
       throw error;
     }
   };
 
-  // ==================== SETTINGS HOOKS ====================
+  // ── SETTINGS ─────────────────────────────────────────────────────────────
 
   const saveAppSettings = async (settings: Omit<AppSettings, 'userId'>) => {
     if (!currentUser) throw new Error('User not authenticated');
-    
     setLoading(true);
     try {
-      await firebaseService.saveAppSettings({
-        ...settings,
-        userId: currentUser.uid
-      });
+      await supabaseService.saveAppSettings({ ...settings, userId: currentUser.id });
       toast.success('Settings saved!');
     } catch (error) {
       toast.error('Failed to save settings');
@@ -229,23 +213,21 @@ export const useFirebaseData = () => {
 
   const getAppSettings = async () => {
     if (!currentUser) return null;
-    
     try {
-      return await firebaseService.getAppSettings(currentUser.uid);
+      return await supabaseService.getAppSettings(currentUser.id);
     } catch (error) {
       toast.error('Failed to load settings');
       throw error;
     }
   };
 
-  // ==================== ANALYTICS HOOKS ====================
+  // ── ANALYTICS ────────────────────────────────────────────────────────────
 
   const getUserAnalytics = async (days?: number) => {
     if (!currentUser) return null;
-    
     setLoading(true);
     try {
-      return await firebaseService.getUserAnalytics(currentUser.uid, days);
+      return await supabaseService.getUserAnalytics(currentUser.id, days);
     } catch (error) {
       toast.error('Failed to load analytics');
       throw error;
@@ -256,32 +238,16 @@ export const useFirebaseData = () => {
 
   return {
     loading,
-    // Journal
-    createJournalEntry,
-    getJournalEntries,
-    updateJournalEntry,
-    deleteJournalEntry,
-    // Mood
-    createMoodEntry,
-    getMoodEntries,
-    getLatestMoodEntry,
-    // Chat
-    createConversation,
-    addMessage,
-    getConversationMessages,
-    getUserConversations,
-    // Progress
-    saveProgressData,
-    getProgressData,
-    // Settings
-    saveAppSettings,
-    getAppSettings,
-    // Analytics
-    getUserAnalytics
+    createJournalEntry, getJournalEntries, updateJournalEntry, deleteJournalEntry,
+    createMoodEntry, getMoodEntries, getLatestMoodEntry,
+    createConversation, addMessage, getConversationMessages, getUserConversations,
+    saveProgressData, getProgressData,
+    saveAppSettings, getAppSettings,
+    getUserAnalytics,
   };
 };
 
-// Hook for real-time data (using React state)
+// ── useRealtimeData ───────────────────────────────────────────────────────────
 export const useRealtimeData = () => {
   const { currentUser } = useAuth();
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
@@ -290,19 +256,15 @@ export const useRealtimeData = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) {
-      setLoading(false);
-      return;
-    }
+    if (!currentUser) { setLoading(false); return; }
 
     const loadData = async () => {
       try {
         const [entries, convs, settings] = await Promise.all([
-          firebaseService.getJournalEntries(currentUser.uid, 20),
-          getLocalUserConversations(currentUser.uid),
-          firebaseService.getAppSettings(currentUser.uid)
+          supabaseService.getJournalEntries(currentUser.id, 20),
+          getLocalUserConversations(currentUser.id),
+          supabaseService.getAppSettings(currentUser.id),
         ]);
-
         setJournalEntries(entries);
         setConversations(convs);
         setAppSettings(settings);
@@ -317,15 +279,7 @@ export const useRealtimeData = () => {
   }, [currentUser]);
 
   return {
-    journalEntries,
-    conversations,
-    appSettings,
-    loading,
-    refreshData: () => {
-      if (currentUser) {
-        setLoading(true);
-        // Reload data
-      }
-    }
+    journalEntries, conversations, appSettings, loading,
+    refreshData: () => { if (currentUser) setLoading(true); },
   };
 };

@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth, firebaseService, UserProfile } from '../../services/firebaseService';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '../../services/supabaseClient';
+import { supabaseService } from '../../services/supabaseService';
+import type { UserProfile } from '../../services/supabaseService';
 
 interface AuthContextType {
-  currentUser: User | null;
+  currentUser: SupabaseUser | null;
   userProfile: UserProfile | null;
   loading: boolean;
   signUp: (email: string, password: string, displayName: string) => Promise<UserProfile>;
@@ -31,17 +33,34 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    // Get initial session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const user = session?.user ?? null;
       setCurrentUser(user);
-      
       if (user) {
         try {
-          const profile = await firebaseService.getUserProfile(user.uid);
+          const profile = await supabaseService.getUserProfile(user.id);
+          setUserProfile(profile);
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          setUserProfile(null);
+        }
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const user = session?.user ?? null;
+      setCurrentUser(user);
+      if (user) {
+        try {
+          const profile = await supabaseService.getUserProfile(user.id);
           setUserProfile(profile);
         } catch (error) {
           console.error('Error fetching user profile:', error);
@@ -50,18 +69,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else {
         setUserProfile(null);
       }
-      
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => subscription.unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, displayName: string): Promise<UserProfile> => {
     try {
-      const userProfile = await firebaseService.signUp(email, password, displayName);
-      setUserProfile(userProfile);
-      return userProfile;
+      const profile = await supabaseService.signUp(email, password, displayName);
+      setUserProfile(profile);
+      return profile;
     } catch (error) {
       console.error('Sign up error:', error);
       throw error;
@@ -70,9 +88,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signIn = async (email: string, password: string): Promise<UserProfile> => {
     try {
-      const userProfile = await firebaseService.signIn(email, password);
-      setUserProfile(userProfile);
-      return userProfile;
+      const profile = await supabaseService.signIn(email, password);
+      setUserProfile(profile);
+      return profile;
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
@@ -81,9 +99,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signInWithGoogle = async (): Promise<UserProfile> => {
     try {
-      const userProfile = await firebaseService.signInWithGoogle();
-      setUserProfile(userProfile);
-      return userProfile;
+      const profile = await supabaseService.signInWithGoogle();
+      setUserProfile(profile);
+      return profile;
     } catch (error) {
       console.error('Google sign in error:', error);
       throw error;
@@ -92,7 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async (): Promise<void> => {
     try {
-      await firebaseService.signOut();
+      await supabaseService.signOut();
       setCurrentUser(null);
       setUserProfile(null);
     } catch (error) {
@@ -103,7 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const sendPasswordResetEmail = async (email: string): Promise<void> => {
     try {
-      await firebaseService.sendPasswordResetEmail(email);
+      await supabaseService.sendPasswordResetEmail(email);
     } catch (error) {
       console.error('Password reset error:', error);
       throw error;
@@ -112,11 +130,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateUserProfile = async (updates: Partial<UserProfile>): Promise<void> => {
     if (!currentUser) throw new Error('No user logged in');
-    
     try {
-      await firebaseService.updateUserProfile(currentUser.uid, updates);
-      // Refresh user profile
-      const updatedProfile = await firebaseService.getUserProfile(currentUser.uid);
+      await supabaseService.updateUserProfile(currentUser.id, updates);
+      const updatedProfile = await supabaseService.getUserProfile(currentUser.id);
       setUserProfile(updatedProfile);
     } catch (error) {
       console.error('Update profile error:', error);
@@ -126,11 +142,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const completeOnboarding = async (onboardingData: any): Promise<void> => {
     if (!currentUser) throw new Error('No user logged in');
-    
     try {
-      await firebaseService.completeOnboarding(currentUser.uid, onboardingData);
-      // Refresh user profile
-      const updatedProfile = await firebaseService.getUserProfile(currentUser.uid);
+      await supabaseService.completeOnboarding(currentUser.id, onboardingData);
+      const updatedProfile = await supabaseService.getUserProfile(currentUser.id);
       setUserProfile(updatedProfile);
     } catch (error) {
       console.error('Complete onboarding error:', error);
@@ -140,9 +154,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUserProfile = async (): Promise<void> => {
     if (!currentUser) return;
-    
     try {
-      const profile = await firebaseService.getUserProfile(currentUser.uid);
+      const profile = await supabaseService.getUserProfile(currentUser.id);
       setUserProfile(profile);
     } catch (error) {
       console.error('Refresh profile error:', error);
@@ -160,7 +173,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     sendPasswordResetEmail,
     updateUserProfile,
     completeOnboarding,
-    refreshUserProfile
+    refreshUserProfile,
   };
 
   return (
