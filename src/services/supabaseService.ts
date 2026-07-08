@@ -107,23 +107,55 @@ export class SupabaseService {
 
   // ── AUTH ──────────────────────────────────────────────────────────────────
   async signUp(email: string, password: string, displayName: string): Promise<UserProfile> {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw new Error(authError(error));
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { display_name: displayName }, // store displayName in auth metadata
+      },
+    });
+    if (error) {
+      console.error('❌ Supabase auth.signUp raw error:', error);
+      throw new Error(authError(error));
+    }
     const user = data.user!;
     const profile: UserProfile = {
       uid: user.id, email, displayName, createdAt: new Date(), lastLoginAt: new Date(),
       onboardingComplete: false, preferences: DEFAULT_PREFERENCES,
       mentalHealthProfile: DEFAULT_MHP, therapeuticPlan: DEFAULT_PLAN, privacySettings: DEFAULT_PRIVACY,
     };
-    await this.createUserProfile(profile);
+    // Wait briefly for the session JWT to propagate so RLS auth.uid() resolves correctly
+    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      await this.createUserProfile(profile);
+    } catch (profileError: any) {
+      console.error('❌ createUserProfile failed:', profileError?.message, profileError?.code);
+      throw new Error(`Profile creation failed: ${profileError?.message ?? 'Check RLS policies on public.profiles'}`);
+    }
     return profile;
   }
 
   async signIn(email: string, password: string): Promise<UserProfile> {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(authError(error));
-    const profile = await this.getUserProfile(data.user.id);
-    if (!profile) throw new Error('User profile not found');
+    let profile = await this.getUserProfile(data.user.id);
+    if (!profile) {
+      // Profile missing — create it on the fly (handles users created before trigger was set up)
+      console.warn('⚠️ No profile found for user, creating one now...');
+      profile = {
+        uid: data.user.id,
+        email: data.user.email ?? email,
+        displayName: data.user.user_metadata?.display_name ?? email.split('@')[0],
+        createdAt: new Date(),
+        lastLoginAt: new Date(),
+        onboardingComplete: false,
+        preferences: DEFAULT_PREFERENCES,
+        mentalHealthProfile: DEFAULT_MHP,
+        therapeuticPlan: DEFAULT_PLAN,
+        privacySettings: DEFAULT_PRIVACY,
+      };
+      await this.createUserProfile(profile);
+    }
     return profile;
   }
 
@@ -165,7 +197,10 @@ export class SupabaseService {
       privacy_settings: p.privacySettings,
       created_at: p.createdAt.toISOString(), last_login_at: new Date().toISOString(),
     }, { onConflict: 'id' });
-    if (error) throw error;
+    if (error) {
+      console.error('❌ profiles upsert error:', error.code, error.message, error.details, error.hint);
+      throw error;
+    }
   }
 
   async getUserProfile(uid: string): Promise<UserProfile | null> {

@@ -60,10 +60,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setCurrentUser(user);
       if (user) {
         try {
-          const profile = await supabaseService.getUserProfile(user.id);
+          let profile = await supabaseService.getUserProfile(user.id);
+          if (!profile) {
+            // Auto-create profile for users who don't have one yet
+            profile = {
+              uid: user.id,
+              email: user.email ?? '',
+              displayName: user.user_metadata?.display_name ?? (user.email?.split('@')[0] ?? 'User'),
+              createdAt: new Date(),
+              lastLoginAt: new Date(),
+              onboardingComplete: false,
+              preferences: { language: 'mixed', culturalBackground: 'indian', communicationStyle: 'casual', interests: [], comfortEnvironment: '', avatarStyle: 'friendly', notificationsEnabled: true },
+              mentalHealthProfile: { primaryConcerns: [], goals: [], riskFactors: [], protectiveFactors: [], currentRiskLevel: 'none' },
+              therapeuticPlan: { primaryGoals: [], secondaryGoals: [], interventionStrategies: [], progressMilestones: {}, lastUpdated: new Date() },
+              privacySettings: { dataCollection: true, analyticsOptIn: true, researchParticipation: false },
+            } as any;
+            await supabaseService.createUserProfile(profile!);
+          }
           setUserProfile(profile);
         } catch (error) {
-          console.error('Error fetching user profile:', error);
+          console.error('Error fetching/creating user profile:', error);
           setUserProfile(null);
         }
       } else {
