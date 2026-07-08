@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from './auth/AuthProvider';
-import { firebaseService } from '../services/firebaseService';
+import { supabaseService } from '../services/supabaseService';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 export function IndexTestTool() {
@@ -17,23 +17,23 @@ export function IndexTestTool() {
     const tests = [
       {
         name: 'Mood Entries Query',
-        test: () => firebaseService.getMoodEntries(currentUser.uid)
+        test: () => supabaseService.getMoodEntries(currentUser.id)
       },
       {
         name: 'Latest Mood Entry',
-        test: () => firebaseService.getLatestMoodEntry(currentUser.uid)
+        test: () => supabaseService.getLatestMoodEntry(currentUser.id)
       },
       {
         name: 'Progress Analytics',
-        test: () => firebaseService.getUserProgressAnalytics(currentUser.uid, 'month')
+        test: () => supabaseService.getUserProgressAnalytics(currentUser.id, 'month')
       },
       {
         name: 'Chat Conversations',
-        test: () => firebaseService.getChatConversations(currentUser!.uid)
+        test: () => supabaseService.getChatConversations(currentUser!.uid)
       },
       {
         name: 'Progress Data',
-        test: () => firebaseService.getProgressData(currentUser.uid)
+        test: () => supabaseService.getProgressData(currentUser.id)
       }
     ];
 

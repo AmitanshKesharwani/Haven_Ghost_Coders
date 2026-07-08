@@ -31,7 +31,7 @@ interface DashboardData {
 
 export function AdvancedDashboard({ userId, navigateTo }: AdvancedDashboardProps) {
   const { currentTheme } = useTheme();
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const [showAssessments, setShowAssessments] = useState(false);
   const [assessmentResults, setAssessmentResults] = useState<any[]>([]);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -47,10 +47,10 @@ export function AdvancedDashboard({ userId, navigateTo }: AdvancedDashboardProps
     setLoading(true);
     try {
       // Fetch user data
-      const userName = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+      const userName = userProfile?.displayName || currentUser.email?.split('@')[0] || 'User';
       
       // Fetch journal entries
-      const journalEntries = await firebaseService.getJournalEntries(userId, 1);
+      const journalEntries = await supabaseService.getJournalEntries(userId, 1);
       const lastJournal = journalEntries[0] || null;
       
       // Fetch conversations
@@ -58,10 +58,10 @@ export function AdvancedDashboard({ userId, navigateTo }: AdvancedDashboardProps
       const lastConv = conversations[0] || null;
       
       // Fetch sessions
-      const sessions = await firebaseService.getUserSessions(userId, 5);
+      const sessions = await supabaseService.getUserSessions(userId, 5);
       
       // Fetch analytics
-      const analytics = await firebaseService.getUserAnalytics(userId, 7);
+      const analytics = await supabaseService.getUserAnalytics(userId, 7);
       
       // Calculate wellness score (0-100)
       const wellnessScore = calculateWellnessScore(analytics, sessions);
@@ -431,7 +431,7 @@ export function AdvancedDashboard({ userId, navigateTo }: AdvancedDashboardProps
               </div>
               <div className="space-y-3">
                 <Button 
-                  onClick={() => navigateTo('companion')}
+                  onClick={() => navigateTo('ai-companion')}
                   className="w-full justify-start bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                 >
                   <MessageCircle className="w-4 h-4 mr-3" />
@@ -445,7 +445,7 @@ export function AdvancedDashboard({ userId, navigateTo }: AdvancedDashboardProps
                   Take Assessment
                 </Button>
                 <Button 
-                  onClick={() => navigateTo('voice')}
+                  onClick={() => navigateTo('calm-down')}
                   className="w-full justify-start bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                 >
                   <Activity className="w-4 h-4 mr-3" />

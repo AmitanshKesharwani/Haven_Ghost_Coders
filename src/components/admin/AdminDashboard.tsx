@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { firebaseService, UserProfile, JournalEntry, MoodEntry } from '../../services/firebaseService';
+import { supabaseService } from '../../services/supabaseService';
+import type { UserProfile, JournalEntry, MoodEntry } from '../../services/supabaseService';
 import { useAuth } from '../auth/AuthProvider';
 import { Users, BookOpen, Heart, BarChart3, Settings, Database } from 'lucide-react';
 
@@ -21,11 +22,11 @@ export const AdminDashboard: React.FC = () => {
       try {
         // Load all user data
         const [profile, journal, mood, analyticsData, settings] = await Promise.all([
-          firebaseService.getUserProfile(currentUser.uid),
-          firebaseService.getJournalEntries(currentUser.uid, 10),
-          firebaseService.getMoodEntries(currentUser.uid, 50),
-          firebaseService.getUserAnalytics(currentUser.uid, 30),
-          firebaseService.getAppSettings(currentUser.uid)
+          supabaseService.getUserProfile(currentUser.id),
+          supabaseService.getJournalEntries(currentUser.id, 10),
+          supabaseService.getMoodEntries(currentUser.id, 50),
+          supabaseService.getUserAnalytics(currentUser.id, 30),
+          supabaseService.getAppSettings(currentUser.id)
         ]);
 
         setUserProfile(profile);

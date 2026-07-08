@@ -14,8 +14,9 @@ import {
   Loader2, // *** NEW ***
 } from 'lucide-react';
 import type { Screen } from '../types';
-import { useAuth } from './auth/AuthProvider'; // *** NEW *** (Adjust path if needed)
-import { firebaseService, JournalEntry } from '../services/firebaseService'; // *** NEW *** (Adjust path if needed)
+import { useAuth } from './auth/AuthProvider';
+import { supabaseService } from '../services/supabaseService';
+import type { JournalEntry } from '../services/supabaseService';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface CalmDownSessionProps {
@@ -236,7 +237,7 @@ export function CalmDownSession({ navigateTo }: CalmDownSessionProps) {
 
     // Construct the new journal entry
     const newEntry: Omit<JournalEntry, 'entryId' | 'createdAt' | 'updatedAt'> = {
-      userId: currentUser.uid,
+      userId: currentUser.id,
       title: 'Calm Down Session Journal', // Label: Title
       content: journalText.trim(),
       mood: 'neutral', // Default mood, as it's not explicitly asked
@@ -250,7 +251,7 @@ export function CalmDownSession({ navigateTo }: CalmDownSessionProps) {
     try {
       // We pass an object that matches Omit<JournalEntry, 'entryId'>
       // Our createJournalEntry function handles createdAt/updatedAt
-      await firebaseService.createJournalEntry(newEntry as Omit<JournalEntry, 'entryId'>);
+      await supabaseService.createJournalEntry(newEntry as Omit<JournalEntry, 'entryId'>);
       console.log('Calm down session journal saved successfully.');
     } catch (error) {
       console.error('Failed to save journal entry:', error);

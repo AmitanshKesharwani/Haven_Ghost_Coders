@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
-import { firebaseService } from '../services/firebaseService';
+import { supabaseService } from '../services/supabaseService';
 import { toast } from 'sonner';
 
 interface AssessmentFormProps {
@@ -244,11 +244,11 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({
       const scores = calculateScore();
       
       // Get previous assessment for comparison
-      const previousAssessments = await firebaseService.getUserAssessments(currentUser.uid, assessmentType);
+      const previousAssessments = await supabaseService.getUserAssessments(currentUser.id, assessmentType);
       const previousScore = previousAssessments.length > 0 ? previousAssessments[0]?.scores?.totalScore : null;
       
       const assessmentResult = {
-        userId: currentUser.uid,
+        userId: currentUser.id,
         assessmentType,
         completedAt: new Date(),
         responses,
@@ -267,12 +267,12 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({
         } : {})
       };
 
-      await firebaseService.saveAssessmentResult(assessmentResult);
+      await supabaseService.saveAssessmentResult(assessmentResult);
       
       // --- NEW: Log this activity ---
       try {
-        await firebaseService.logUserActivity(
-          currentUser.uid,
+        await supabaseService.logUserActivity(
+          currentUser.id,
           'completed_assessment',
           { 
             assessmentType,

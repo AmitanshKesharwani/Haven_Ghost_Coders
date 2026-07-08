@@ -15,7 +15,8 @@ import {
   BarChart3
 } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
-import { firebaseService, SessionData } from '../services/firebaseService';
+import { supabaseService } from '../services/supabaseService';
+import type { SessionData } from '../services/supabaseService';
 import { toast } from 'sonner';
 
 interface SessionManagerProps {
@@ -40,7 +41,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({ onStartNewSessio
 
     setLoading(true);
     try {
-      const userSessions = await firebaseService.getUserSessions(currentUser.uid, 20);
+      const userSessions = await supabaseService.getUserSessions(currentUser.id, 20);
       setSessions(userSessions);
       
       // Check for active session (no end time)
@@ -60,7 +61,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({ onStartNewSessio
 
     try {
       const sessionData = {
-        userId: currentUser.uid,
+        userId: currentUser.id,
         startTime: new Date(),
         duration: 0,
         sessionType,
@@ -82,7 +83,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({ onStartNewSessio
         }
       };
 
-      await firebaseService.createSession(sessionData);
+      await supabaseService.createSession(sessionData);
       toast.success(`${sessionType} session started! / ${sessionType} सत्र शुरू हुआ!`);
       
       // Reload sessions to show the new one
@@ -105,8 +106,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({ onStartNewSessio
 
       const duration = Date.now() - session.startTime.getTime();
       
-      await firebaseService.endSession(sessionId, {
-        duration,
+      await supabaseService.endSession(sessionId, {
         outcomes: {
           overallMood: 'stable',
           goalsAddressed: ['emotional_support'],

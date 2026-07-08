@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from './auth/AuthProvider';
-import { firebaseService } from '../services/firebaseService';
+import { supabaseService } from '../services/supabaseService';
 import { CheckCircle, XCircle, AlertCircle, Database, User, Settings } from 'lucide-react';
 
 interface DiagnosticResult {
@@ -39,7 +39,7 @@ export function DiagnosticTool() {
 
     // Test 2: User Profile
     try {
-      const profile = await firebaseService.getUserProfile(currentUser.uid);
+      const profile = await supabaseService.getUserProfile(currentUser.id);
       addResult({
         category: 'Database',
         test: 'User Profile Retrieval',
@@ -58,7 +58,7 @@ export function DiagnosticTool() {
 
     // Test 3: Journal Entries
     try {
-      const entries = await firebaseService.getJournalEntries(currentUser.uid, 5);
+      const entries = await supabaseService.getJournalEntries(currentUser.id, 5);
       addResult({
         category: 'Database',
         test: 'Journal Entries',
@@ -77,7 +77,7 @@ export function DiagnosticTool() {
 
     // Test 4: Mood Entries
     try {
-      const moods = await firebaseService.getMoodEntries(currentUser!.uid, 5);
+      const moods = await supabaseService.getMoodEntries(currentUser!.uid, 5);
       addResult({
         category: 'Database',
         test: 'Mood Entries',
@@ -96,7 +96,7 @@ export function DiagnosticTool() {
 
     // Test 5: Chat Conversations
     try {
-      const conversations = await firebaseService.getChatConversations(currentUser!.uid, 5);
+      const conversations = await supabaseService.getChatConversations(currentUser!.uid, 5);
       addResult({
         category: 'Database',
         test: 'Chat Conversations',
@@ -115,7 +115,7 @@ export function DiagnosticTool() {
 
     // Test 6: Progress Data
     try {
-      const progress = await firebaseService.getProgressData(currentUser!.uid, 5);
+      const progress = await supabaseService.getProgressData(currentUser!.uid, 5);
       addResult({
         category: 'Database',
         test: 'Progress Data',
@@ -134,7 +134,7 @@ export function DiagnosticTool() {
 
     // Test 7: App Settings
     try {
-      const settings = await firebaseService.getAppSettings(currentUser.uid);
+      const settings = await supabaseService.getAppSettings(currentUser.id);
       addResult({
         category: 'Database',
         test: 'App Settings',
@@ -153,8 +153,8 @@ export function DiagnosticTool() {
 
     // Test 8: Create Test Data
     try {
-      const testJournal = await firebaseService.createJournalEntry({
-        userId: currentUser.uid,
+      const testJournal = await supabaseService.createJournalEntry({
+        userId: currentUser.id,
         title: 'Diagnostic Test Entry',
         content: 'This is a test entry created by the diagnostic tool.',
         mood: 'neutral',

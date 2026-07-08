@@ -43,7 +43,7 @@ import StressBusterSession from './therapy/StressBusterSession';
 // Import services
 import { emotionDetection } from '../services/emotionDetection';
 import { useAuth } from './auth/AuthProvider';
-import { UserProfile } from '../services/firebaseService';
+import { UserProfile } from '../services/supabaseService';
 
 interface AppRouterProps {
   currentUser: UserProfile;
@@ -169,11 +169,11 @@ export const AppRouter: React.FC<AppRouterProps> = ({ currentUser, onLogout }) =
           
           <Routes>
             <Route path="/" element={<Navigate to="/home" replace />} />
-            <Route path="/dashboard" element={<AdvancedDashboard userId={currentUser.uid} navigateTo={(screen) => navigate(`/${screen === 'ai-companion' ? 'companion' : screen === 'calm-down' ? 'voice' : screen}`)} />} />
+            <Route path="/dashboard" element={<AdvancedDashboard userId={currentUser.id} navigateTo={(screen) => navigate(`/${screen === 'ai-companion' ? 'companion' : screen === 'calm-down' ? 'voice' : screen}`)} />} />
             <Route path="/companion" element={<AICompanion userData={currentUser as any} />} />
             <Route path="/journal" element={<Journal />} />
             <Route path="/home" element={<HomePage />} />
-            <Route path="/analytics" element={<AdvancedAnalytics userId={currentUser.uid} />} />
+            <Route path="/analytics" element={<AdvancedAnalytics userId={currentUser.id} />} />
             <Route path="/voice" element={<VoiceTherapy />} />
             <Route path="/emotion" element={<EmotionDetection />} />
             <Route path="/settings" element={<Settings navigateTo={(screen) => navigate(`/${screen}`)} />} />

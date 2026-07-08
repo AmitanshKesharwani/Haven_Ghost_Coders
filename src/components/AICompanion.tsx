@@ -411,7 +411,7 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
   console.log('🔍 AICompanion Debug:', {
     userData: userProfile || userData,
     hasUserData: !!(userProfile || userData),
-    currentUser: currentUser?.uid,
+    currentUser: currentUser?.id,
     apiKey: import.meta.env.VITE_GROQ_API_KEY ? 'Present' : 'Missing',
     apiKeyLength: import.meta.env.VITE_GROQ_API_KEY?.length || 0
   });
@@ -728,7 +728,7 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
     setIsLoadingConversations(true);
     (async () => {
       try {
-        const conversations = await getUserConversations(currentUser.uid);
+        const conversations = await getUserConversations(currentUser.id);
         setConversationList(conversations);
       } catch (_error) {
         toast.error("Failed to load conversation history.");
@@ -847,7 +847,7 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
     let conversationId = currentConversationId;
     if (!conversationId) {
       try {
-        conversationId = await createConversation(currentUser.uid, 'general', 'supportive');
+        conversationId = await createConversation(currentUser.id, 'general', 'supportive');
         setCurrentConversationId(conversationId);
       } catch (error) {
         console.error('Error creating conversation:', error);
@@ -879,7 +879,7 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
       );
       const refreshedAfterUserMessage = await getConversationMessages(userMessageData.conversationId);
       setMessages(refreshedAfterUserMessage);
-      const refreshedConversationsAfterUser = await getUserConversations(currentUser.uid);
+      const refreshedConversationsAfterUser = await getUserConversations(currentUser.id);
       setConversationList(refreshedConversationsAfterUser);
 
       // Update Firebase Session (User Interaction)
@@ -949,7 +949,7 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
       // ✅ Call AI Orchestrator for therapeutic response
       const therapeuticResponse = await aiOrchestrator.generateTherapeuticResponse(
         messageText,
-        currentUser?.uid || 'anonymous',
+        currentUser?.id || 'anonymous',
         {
           session: { sessionId: conversationId || 'chat-session' },
           emotionalAnalysis: currentEmotion,
@@ -1022,7 +1022,7 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
       );
       const refreshedAfterAIMessage = await getConversationMessages(aiMessageData.conversationId);
       setMessages(refreshedAfterAIMessage);
-      const refreshedConversationsAfterAI = await getUserConversations(currentUser.uid);
+      const refreshedConversationsAfterAI = await getUserConversations(currentUser.id);
       setConversationList(refreshedConversationsAfterAI);
 
       // Update Firebase Session (AI Interaction)

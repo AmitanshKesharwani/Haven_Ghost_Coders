@@ -63,16 +63,17 @@ export interface UserProfile {
   lastLoginAt: Date;
   onboardingComplete: boolean;
   preferences: {
-    language: 'hindi' | 'english' | 'mixed' | 'bengali' | 'marathi' | 'telugu' | 'tamil' | 'gujarati' | 'kannada' | 'malayalam' | 'urdu' | 'punjabi' | 'odia' | 'assamese';
-    culturalBackground: string;
-    communicationStyle: 'formal' | 'casual';
-    interests: string[];
-    comfortEnvironment: string;
-    avatarStyle: string;
-    notificationsEnabled: boolean;
+    language?: 'hindi' | 'english' | 'mixed' | 'bengali' | 'marathi' | 'telugu' | 'tamil' | 'gujarati' | 'kannada' | 'malayalam' | 'urdu' | 'punjabi' | 'odia' | 'assamese';
+    culturalBackground?: string;
+    communicationStyle?: 'formal' | 'casual';
+    interests?: string[];
+    comfortEnvironment?: string;
+    avatarStyle?: string;
+    notificationsEnabled?: boolean;
     crisisContactName?: string;
     crisisContactPhone?: string;
     selectedVoice?: string; // Google Cloud voice name (e.g., 'en-IN-Wavenet-D')
+    theme?: string;
   };
   mentalHealthProfile: {
     primaryConcerns: string[];
@@ -93,9 +94,9 @@ export interface UserProfile {
     lastUpdated: Date;
   };
   privacySettings: {
-    dataCollection: boolean;
-    analyticsOptIn: boolean;
-    researchParticipation: boolean;
+    dataCollection?: boolean;
+    analyticsOptIn?: boolean;
+    researchParticipation?: boolean;
   };
 }
 
@@ -121,6 +122,9 @@ export interface SessionData {
     insightsGained: string[];
   };
   updatedAt?: Date;
+  interactions?: any[];
+  emotionalJourney?: any[];
+  riskAssessments?: any[];
 }
 
 // Define Interfaces for Subcollection Documents

@@ -14,7 +14,7 @@ import { conversationMemory, type ConversationTurn, type ContinuityBridge } from
 import { culturalIntelligence } from './culturalIntelligence';
 import { loadingManager } from './loadingManager';
 // --- NEW IMPORTS ---
-import { firebaseService, type UserActivity } from './firebaseService';
+import { supabaseService, type UserActivity } from './supabaseService';
 // --- END NEW IMPORTS ---
 
 import { AdaptiveAssessmentEngine } from './adaptiveAssessmentEngine';
@@ -542,7 +542,7 @@ export class AIOrchestrator {
       // --- NEW: Fetch Recent Activities ---
       let recentActivities: UserActivity[] = [];
       try {
-        recentActivities = await firebaseService.getRecentUserActivities(userId, 2); // Get last 2 activities
+        recentActivities = await supabaseService.getRecentUserActivities(userId, 2); // Get last 2 activities
         console.log(`✅ Fetched ${recentActivities.length} recent activities for context.`);
       } catch (error) {
         console.warn('Continuity Error: Could not fetch recent activities', error);

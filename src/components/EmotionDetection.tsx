@@ -5,9 +5,8 @@ import { Camera, CameraOff, Download, Eye, Activity } from 'lucide-react';
 import { emotionDetection, type EmotionDetectionResult } from '../services/emotionDetection';
 import { toast } from 'sonner';
 
-// --- Firestore Imports ---
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db, firebaseService } from '../services/firebaseService';
+import { supabase } from '../services/supabaseClient';
+import { supabaseService } from '../services/supabaseService';
 
 // --- Auth Hook Import ---
 import { useAuth } from './auth/AuthProvider';
@@ -172,40 +171,40 @@ export default function EmotionDetection() {
       handleEmotionUpdate(result); // Update UI
       toast.success(`Cloud Analysis: ${result.primaryEmotion} (${Math.round(result.confidence * 100)}%)`);
 
-      // --- Add to Firestore ---
+      // --- Save snapshot to Supabase ---
       try {
-        const snapshotData = {
-          userId: currentUser.uid, // Link to the user
-          timestamp: serverTimestamp(), // Use server time
-          primaryEmotion: result.primaryEmotion,
+        const { error: insertError } = await supabase.from('emotion_snapshots').insert({
+          user_id: currentUser.id,
+          primary_emotion: result.primaryEmotion,
           confidence: result.confidence,
-          emotions: result.emotions, // Save the detailed emotion map
-          wellnessIndicators: result.wellnessIndicators, // Save wellness map
-          source: 'cloud_vision_snapshot' // Indicate the source
-        };
+          metadata: {
+            emotions: result.emotions,
+            wellnessIndicators: result.wellnessIndicators,
+            source: 'cloud_vision_snapshot',
+          },
+        });
 
-        const docRef = await addDoc(collection(db, "emotionSnapshots"), snapshotData);
-        console.log("Snapshot saved to Firestore with ID: ", docRef.id);
-        toast.success("Snapshot analysis saved.");
+        if (insertError) throw insertError;
+        console.log('Snapshot saved to Supabase emotion_snapshots');
+        toast.success('Snapshot analysis saved.');
 
-        // --- NEW: Log this activity ---
+        // --- Log this activity ---
         try {
-          await firebaseService.logUserActivity(
-            currentUser.uid,
+          await supabaseService.logUserActivity(
+            currentUser.id,
             'used_emotion_detection',
-            { 
+            {
               primaryEmotion: result.primaryEmotion,
               confidence: result.confidence,
-              source: 'cloud_vision_snapshot'
+              source: 'cloud_vision_snapshot',
             }
           );
         } catch (activityError) {
           console.warn('Failed to log emotion detection activity:', activityError);
         }
-        // --- END NEW ---
-      } catch (firestoreError) {
-        console.error("Error saving snapshot to Firestore:", firestoreError);
-        toast.error("Failed to save snapshot data.");
+      } catch (saveError) {
+        console.error('Error saving snapshot to Supabase:', saveError);
+        toast.error('Failed to save snapshot data.');
       }
       // ----------------------
 

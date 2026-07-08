@@ -1,5 +1,5 @@
 import CryptoJS from "crypto-js";
-import type { ChatConversation, ChatMessage } from "./firebaseService";
+import type { ChatConversation, ChatMessage } from "./supabaseService";
 
 const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY as string;
 const CONVERSATIONS_KEY = "haven_conversations";
@@ -61,8 +61,8 @@ function saveMessages(messages: ChatMessage[]) {
 
 export async function createConversation(
   userId: string,
-  sessionType: string,
-  aiPersonality: string
+  sessionType: ChatConversation['sessionType'],
+  aiPersonality: ChatConversation['aiPersonality']
 ): Promise<string> {
   try {
     const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
