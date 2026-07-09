@@ -62,7 +62,7 @@ serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "accounts/fireworks/models/llama-v3p1-70b-instruct",
+        model: "accounts/fireworks/models/qwen3p7-plus",
         max_tokens: 800,
         messages: [
           {

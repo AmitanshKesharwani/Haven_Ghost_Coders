@@ -40,7 +40,7 @@ const FALLBACK = {
   copingMentioned: [],
   riskFlags: [],
   summary: "Unable to analyze entry right now.",
-  modelVersion: "llama-v3p1-70b-instruct",
+  modelVersion: "accounts/fireworks/models/qwen3p7-plus",
   analysisTimestamp: new Date().toISOString(),
 };
 
@@ -73,7 +73,7 @@ serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "accounts/fireworks/models/llama-v3p1-70b-instruct",
+        model: "accounts/fireworks/models/qwen3p7-plus",
         max_tokens: 700,
         messages: [
           {
@@ -103,7 +103,17 @@ Rules:
 
     const result = await fwResponse.json();
     const outputText = result?.choices?.[0]?.message?.content ?? "{}";
-    const cleanedText = String(outputText).replace(/^```json\s*|```\s*$/g, "").trim();
+    let cleanedText = String(outputText).trim();
+
+    // Remove markdown code blocks if present
+    cleanedText = cleanedText.replace(/^```json\s*|```\s*$/g, "").trim();
+
+    // Extract JSON block using regex to filter out reasoning tokens/thinking process
+    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      cleanedText = jsonMatch[0];
+    }
+
     const parsed = JSON.parse(cleanedText);
 
     const toStringArray = (value: any): string[] =>
