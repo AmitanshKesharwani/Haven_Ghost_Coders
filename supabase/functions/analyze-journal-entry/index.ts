@@ -22,12 +22,20 @@ async function decryptPayload(payload: { iv: string; data: string }): Promise<an
   if (!keyMaterial) throw new Error("Missing ENCRYPTION_KEY in Edge Function secrets.");
   if (!payload?.iv || !payload?.data) throw new Error("Invalid encrypted payload.");
 
-  const key = await deriveAesKey(keyMaterial);
-  const iv = fromBase64(payload.iv);
-  const ciphertext = fromBase64(payload.data);
+  try {
+    const key = await deriveAesKey(keyMaterial);
+    const iv = fromBase64(payload.iv);
+    const ciphertext = fromBase64(payload.data);
 
-  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-  return JSON.parse(new TextDecoder().decode(decrypted));
+    console.log("Attempting AES-GCM decryption with iv length:", iv.length, "and ciphertext length:", ciphertext.length);
+    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+    const decoded = new TextDecoder().decode(decrypted);
+    console.log("Decrypted payload raw string:", decoded);
+    return JSON.parse(decoded);
+  } catch (err) {
+    console.error("Decryption or JSON parsing failed:", err);
+    throw err;
+  }
 }
 
 const FALLBACK = {
@@ -51,6 +59,7 @@ serve(async (req: Request) => {
 
   try {
     const body = await req.json();
+    console.log("Edge function received body:", JSON.stringify(body));
     const decrypted = await decryptPayload(body?.payload);
     const content = typeof decrypted?.content === "string" ? decrypted.content : "";
     const mood = typeof decrypted?.mood === "string" ? decrypted.mood : "neutral";
@@ -75,6 +84,8 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         model: "accounts/fireworks/models/qwen3p7-plus",
         max_tokens: 700,
+        temperature: 0.1,
+        thinking: { type: "disabled" },
         messages: [
           {
             role: "system",
@@ -83,13 +94,14 @@ Return ONLY valid JSON with these exact keys:
 sentimentScore, sentimentMagnitude, keyThemes, positiveMentions, negativeMentions, potentialTriggers, copingMentioned, riskFlags, summary.
 
 Rules:
+- Output ONLY the final JSON object. Do not include any "Thinking Process:" headers or meta-commentary.
 - sentimentScore must be a number from -1 to 1
 - sentimentMagnitude must be a number from 0 to 1
 - keyThemes and other list fields must be arrays of short strings
 - summary must be one concise supportive sentence
 - If uncertain, keep arrays empty and score near neutral`,
           },
-          { role: "user", content: prompt },
+          { role: "user", content: `/no_think Analyze this journal entry: ${prompt}` },
         ],
       }),
     });
@@ -105,8 +117,16 @@ Rules:
     const outputText = result?.choices?.[0]?.message?.content ?? "{}";
     let cleanedText = String(outputText).trim();
 
-    // Remove markdown code blocks if present
-    cleanedText = cleanedText.replace(/^```json\s*|```\s*$/g, "").trim();
+    // Clean up DeepSeek/Qwen thinking tokens if present
+    cleanedText = cleanedText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+
+    // If "Thinking Process:" is in the text, strip everything up to the first open bracket '{'
+    if (cleanedText.includes("Thinking Process:") || cleanedText.includes("Thinking:")) {
+      const braceIndex = cleanedText.indexOf("{");
+      if (braceIndex !== -1) {
+        cleanedText = cleanedText.substring(braceIndex);
+      }
+    }
 
     // Extract JSON block using regex to filter out reasoning tokens/thinking process
     const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
@@ -114,6 +134,7 @@ Rules:
       cleanedText = jsonMatch[0];
     }
 
+    console.log("Cleaned JSON text to parse:", cleanedText);
     const parsed = JSON.parse(cleanedText);
 
     const toStringArray = (value: any): string[] =>

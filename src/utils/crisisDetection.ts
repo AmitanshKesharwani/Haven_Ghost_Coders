@@ -39,7 +39,7 @@ export const CRISIS_HELPLINES: CrisisHelpline[] = [
 // Crisis keywords in multiple languages
 const CRISIS_KEYWORDS = {
   english: [
-    'suicide', 'kill myself', 'end it all', 'no point living', 'want to die',
+    'suicide', 'kill myself', 'feel like killing myself', 'feeling like killing myself', 'end it all', 'no point living', 'want to die',
     'hurt myself', 'self harm', 'cut myself', 'overdose', 'jump off',
     'hang myself', 'not worth living', 'better off dead', 'end my life',
     'kill me', 'want to disappear', 'can\'t go on', 'give up on life'
