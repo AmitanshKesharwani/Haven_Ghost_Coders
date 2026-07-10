@@ -11,6 +11,8 @@ import { useAuth } from './auth/AuthProvider';
 import { useFirebaseSession } from '../hooks/useFirebaseSession';
 
 import { emotionDetection } from '../services/emotionDetection';
+import { havenSpeak, havenSpeakStop } from '../services/havenTTS';
+import { HavenSTT } from '../services/havenSTT';
 import { toast } from 'sonner';
 import { type ChatConversation, type ChatMessage } from '../services/supabaseService';
 import { createConversation, addMessage, getConversationMessages, getUserConversations, clearAllChatHistory } from '../services/localChatStorage';
@@ -43,50 +45,13 @@ const stripMarkdownForVoice = (text: string): string => {
     .trim();
 };
 
-// ── Browser TTS helper (replaces Firebase synthesizeSpeech) ─────────────────
-function speakWithBrowserTTS(
-  text: string,
-  languageCode: string,
-  speakingRate: number = 1.0,
-  onEnd?: () => void
-): void {
-  if (!window.speechSynthesis) { console.warn('SpeechSynthesis not supported'); onEnd?.(); return; }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = languageCode;
-  utterance.rate = speakingRate;
-  const voices = window.speechSynthesis.getVoices();
-  const match = voices.find(v => v.lang === languageCode)
-    ?? voices.find(v => v.lang.startsWith(languageCode.split('-')[0]))
-    ?? null;
-  if (match) utterance.voice = match;
-  utterance.onend = () => onEnd?.();
-  utterance.onerror = (e) => { console.error('SpeechSynthesis error:', e); onEnd?.(); };
-  window.speechSynthesis.speak(utterance);
-}
+// ── TTS: Haven AI backend with browser fallback ─────────────────────────────
+// havenSpeak() is imported from '../services/havenTTS'
+// Usage: await havenSpeak(text, languageCode, rate)
 
-// ── Browser STT helper (replaces Firebase transcribeAudio) ──────────────────
-function transcribeWithBrowserSTT(
-  languageCode: string,
-  onResult: (transcript: string, confidence: number) => void,
-  onError: (err: string) => void,
-  onEnd?: () => void
-): () => void {
-  const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  if (!SR) { onError('SpeechRecognition not supported in this browser'); return () => {}; }
-  const recognition = new SR();
-  recognition.lang = languageCode;
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-  recognition.onresult = (e: any) => {
-    const result = e.results[0]?.[0];
-    onResult(result?.transcript ?? '', result?.confidence ?? 0);
-  };
-  recognition.onerror = (e: any) => onError(e.error ?? 'SpeechRecognition error');
-  if (onEnd) recognition.onend = onEnd;
-  recognition.start();
-  return () => recognition.stop();
-}
+// ── STT: Haven AI backend with browser fallback ─────────────────────────────
+// HavenSTT is imported from '../services/havenSTT'
+// Usage: sttInstance.start(lang, onResult, onError) / sttInstance.stop()
 
 // Simple markdown renderer component
 const MarkdownRenderer = ({ content }: { content: string }) => {
@@ -332,14 +297,10 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
 
     try {
       const cleanMessage = stripMarkdownForVoice(textToRead);
-      console.log(`Using browser TTS for Read Aloud (Lang: ${languageCode})...`);
+      console.log(`Using Haven TTS for Read Aloud (Lang: ${selectedVoice.language})...`);
       setIsVoicePlaying(true);
-      speakWithBrowserTTS(
-        cleanMessage,
-        selectedVoice.language,
-        selectedVoice.rate,
-        () => setIsVoicePlaying(false)
-      );
+      await havenSpeak(cleanMessage, selectedVoice.language, selectedVoice.rate);
+      setIsVoicePlaying(false);
     } catch (error: any) {
       console.error("Error during Read Aloud TTS:", error);
       toast.error(`AI Voice failed: ${error.message || 'Could not synthesize speech'}`);
@@ -416,43 +377,38 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
       }
       // --- End Language Code Determination ---
 
-      console.log(`Using browser STT (Lang: ${languageCode})...`);
+      console.log(`Using Haven STT (Lang: ${languageCode})...`);
       setIsVoiceMode(true);
-      setInputValue("Listening... / सुन रहा हूँ..."); // Update placeholder
+      setInputValue("Listening... / सुन रहा हूँ...");
 
-      const stopSTT = transcribeWithBrowserSTT(
+      const sttInstance = new HavenSTT();
+      await sttInstance.start(
         languageCode,
-        (transcript, confidence) => {
-          console.log(`Transcription received (Conf: ${confidence.toFixed(2)}):`, transcript);
-          if (transcript) {
-            setInputValue(transcript);
+        (result) => {
+          console.log(`Transcription received (Conf: ${result.confidence.toFixed(2)}):`, result.transcript);
+          if (result.transcript) {
+            setInputValue(result.transcript);
           } else {
             setInputValue("");
             toast.info("Could not understand audio, please try speaking clearly.");
           }
+          setIsVoiceMode(false);
+          setInputValue(prev => prev === "Listening... / सुन रहा हूँ..." ? "" : prev);
         },
         (errMsg) => {
           console.error("STT error:", errMsg);
-          
           let errorMessage = 'Voice input failed';
-          if (errMsg.includes('not-allowed')) {
-            errorMessage = 'Microphone access denied. Please enable permissions.';
-          } else if (errMsg.includes('no-speech')) {
-            errorMessage = 'No speech detected. Please try again.';
-          } else {
-            errorMessage = `Voice input failed: ${errMsg}`;
-          }
-          
+          if (errMsg.includes('not-allowed')) errorMessage = 'Microphone access denied. Please enable permissions.';
+          else if (errMsg.includes('no-speech')) errorMessage = 'No speech detected. Please try again.';
+          else errorMessage = `Voice input failed: ${errMsg}`;
           toast.error(errorMessage);
           setInputValue("");
-        },
-        () => {
           setIsVoiceMode(false);
-          setInputValue(prev => prev === "Listening... / सुन रहा हूँ..." ? "" : prev);
         }
       );
 
-      // Store the stop function so we can cancel it
+      // Store the stop handle so the "stop" button can cancel
+      mediaRecorderRef.current = { stop: () => sttInstance.stop() } as any;
       mediaRecorderRef.current = { stop: stopSTT } as any;
 
     } catch (error) {
@@ -1136,18 +1092,14 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
                                 : 'Hello! I\'m here to support you on your mental health journey.';
                               
                               // Test the voice
-                              const testTTS = () => {
+                              const testTTS = async () => {
                                 try {
                                   setIsVoicePlaying(true);
-                                  speakWithBrowserTTS(
-                                    testMessage,
-                                    voice.language,
-                                    voice.rate,
-                                    () => setIsVoicePlaying(false)
-                                  );
+                                  await havenSpeak(testMessage, voice.language, voice.rate);
                                 } catch (error) {
                                   console.error('Voice test failed:', error);
                                   toast.error('Voice test failed');
+                                } finally {
                                   setIsVoicePlaying(false);
                                 }
                               };

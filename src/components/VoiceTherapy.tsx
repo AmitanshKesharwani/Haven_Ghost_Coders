@@ -5,27 +5,24 @@ import { AVAILABLE_VOICES, type VoiceOption } from '../services/speechServices';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from 'sonner';
 import { SpeechToTextInput } from './SpeechToTextInput';
+import { havenSpeak } from '../services/havenTTS';
 
-// ── Browser TTS helper (no Firebase dependency) ──────────────────────────────
+// ── Browser TTS fallback for voice test (used only when backend unavailable) ─
 function speakWithBrowserTTS(
   text: string,
   languageCode: string,
   speakingRate: number = 1.0,
   onEnd?: () => void
 ): void {
-  if (!window.speechSynthesis) { console.warn('SpeechSynthesis not supported'); onEnd?.(); return; }
+  if (!window.speechSynthesis) { onEnd?.(); return; }
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = languageCode;
-  utterance.rate = speakingRate;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = languageCode; u.rate = speakingRate;
   const voices = window.speechSynthesis.getVoices();
-  const match = voices.find(v => v.lang === languageCode)
-    ?? voices.find(v => v.lang.startsWith(languageCode.split('-')[0]))
-    ?? null;
-  if (match) utterance.voice = match;
-  utterance.onend = () => onEnd?.();
-  utterance.onerror = (e) => { console.error('SpeechSynthesis error:', e); onEnd?.(); };
-  window.speechSynthesis.speak(utterance);
+  const match = voices.find(v => v.lang === languageCode) ?? voices.find(v => v.lang.startsWith(languageCode.split('-')[0])) ?? null;
+  if (match) u.voice = match;
+  u.onend = () => onEnd?.(); u.onerror = () => onEnd?.();
+  window.speechSynthesis.speak(u);
 }
 
 export default function VoiceTherapy() {
@@ -172,15 +169,16 @@ export default function VoiceTherapy() {
     };
     const testMessage = testMessages[voice.language] ?? testMessages['en-IN']!;
 
-    console.log(`🎤 Testing ${voice.name} via browser SpeechSynthesis (${voice.language})`);
+    console.log(`🎤 Testing ${voice.name} via Haven TTS backend (${voice.language})`);
     toast.success(`🎤 Playing ${voice.name} in ${voice.accent}`);
 
-    speakWithBrowserTTS(
-      testMessage,
-      voice.language,
-      voice.rate ?? 1.0,
-      () => setTestingVoice(null)
-    );
+    havenSpeak(testMessage, voice.language, voice.rate ?? 1.0, voice.backendVoiceId)
+      .then(() => setTestingVoice(null))
+      .catch((err) => {
+        console.error(`Voice test failed for ${voice.name}:`, err);
+        toast.error(`Voice test failed`);
+        setTestingVoice(null);
+      });
   };
 
   return (

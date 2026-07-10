@@ -11,8 +11,8 @@ export interface VoiceOption {
   accent: string;
   personality: 'calm' | 'energetic' | 'supportive' | 'professional' | 'friendly';
   description: string;
-  voiceURI?: string; // Optional identifier for backend TTS voice
-  rate: number; // <-- pitch property removed
+  backendVoiceId?: string; // Optional identifier for backend TTS voice
+  rate: number; // <--- pitch property removed
   volume: number;
 }
 
@@ -28,7 +28,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Indian English',
     personality: 'supportive',
     description: 'Warm, caring therapist voice',
-    voiceURI: '',
+    backendVoiceId: 'en_1',
     rate: 0.9,
     volume: 0.8
   },
@@ -40,7 +40,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Indian English',
     personality: 'friendly',
     description: 'Encouraging friend voice',
-    voiceURI: '',
+    backendVoiceId: 'en_1',
     rate: 1.0,
     volume: 0.8
   },
@@ -52,7 +52,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Indian English',
     personality: 'professional',
     description: 'Professional therapist with emotional depth',
-    voiceURI: '',
+    backendVoiceId: 'en_1',
     rate: 0.85,
     volume: 0.8
   },
@@ -65,7 +65,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Hindi',
     personality: 'professional',
     description: 'Professional therapist voice (Hindi)',
-    voiceURI: '',
+    backendVoiceId: 'hi_1',
     rate: 0.9,
     volume: 0.8
   },
@@ -77,7 +77,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Hindi',
     personality: 'energetic',
     description: 'Confident motivator voice (Hindi)',
-    voiceURI: '',
+    backendVoiceId: 'hi_1',
     rate: 1.0,
     volume: 0.9
   },
@@ -89,7 +89,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Hindi',
     personality: 'supportive',
     description: 'Compassionate guide with emotional warmth',
-    voiceURI: '',
+    backendVoiceId: 'hi_1',
     rate: 0.85,
     volume: 0.8
   },
@@ -102,7 +102,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'British English',
     personality: 'calm',
     description: 'Soothing, meditative guide',
-    voiceURI: '',
+    backendVoiceId: 'en_1',
     rate: 0.8,
     volume: 0.7
   },
@@ -114,7 +114,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'American English',
     personality: 'energetic',
     description: 'Motivational coach voice',
-    voiceURI: '',
+    backendVoiceId: 'en_1',
     rate: 1.1,
     volume: 0.9
   },
@@ -127,7 +127,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Bengali',
     personality: 'friendly',
     description: 'Supportive friend (Bengali)',
-    voiceURI: '',
+    backendVoiceId: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -139,7 +139,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Marathi',
     personality: 'calm',
     description: 'Calm guide (Marathi)',
-    voiceURI: '',
+    backendVoiceId: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -151,7 +151,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Tamil',
     personality: 'supportive',
     description: 'Warm and caring (Tamil)',
-    voiceURI: '',
+    backendVoiceId: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -163,7 +163,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Telugu',
     personality: 'energetic',
     description: 'Motivational guide (Telugu)',
-    voiceURI: '',
+    backendVoiceId: '',
     rate: 1.0,
     volume: 0.9
   },
@@ -175,7 +175,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Gujarati',
     personality: 'supportive',
     description: 'Calm and supportive (Gujarati)',
-    voiceURI: '',
+    backendVoiceId: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -187,7 +187,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Kannada',
     personality: 'friendly',
     description: 'Friendly companion (Kannada)',
-    voiceURI: '',
+    backendVoiceId: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -199,7 +199,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     accent: 'Malayalam',
     personality: 'calm',
     description: 'Soothing voice (Malayalam)',
-    voiceURI: '',
+    backendVoiceId: '',
     rate: 0.9,
     volume: 0.8
   }

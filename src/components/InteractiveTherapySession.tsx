@@ -3,28 +3,10 @@ import { Mic, MicOff, Play, Pause, Home, ArrowRight, CheckCircle, Heart, Volume2
 import { AVAILABLE_VOICES, type VoiceOption } from '../services/speechServices';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from 'sonner';
+import { havenSpeak } from '../services/havenTTS';
+import { HavenSTT } from '../services/havenSTT';
 
-// ── Browser TTS helper ────────────────────────────────────────────────────────
-function speakWithBrowserTTS(
-  text: string,
-  languageCode: string,
-  speakingRate: number = 1.0,
-  onEnd?: () => void
-): void {
-  if (!window.speechSynthesis) { console.warn('SpeechSynthesis not supported'); onEnd?.(); return; }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = languageCode;
-  utterance.rate = speakingRate;
-  const voices = window.speechSynthesis.getVoices();
-  const match = voices.find(v => v.lang === languageCode)
-    ?? voices.find(v => v.lang.startsWith(languageCode.split('-')[0]))
-    ?? null;
-  if (match) utterance.voice = match;
-  utterance.onend = () => onEnd?.();
-  utterance.onerror = (e) => { console.error('SpeechSynthesis error:', e); onEnd?.(); };
-  window.speechSynthesis.speak(utterance);
-}
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface TherapyExercise {
   id: string;
@@ -213,15 +195,9 @@ export default function InteractiveTherapySession({ exercise, selectedVoice, onE
   };
 
   const speakMessage = (message: string): Promise<void> => {
-    return new Promise((resolve) => {
-      setIsPlaying(true);
-      speakWithBrowserTTS(
-        message,
-        selectedVoice.language,
-        selectedVoice.rate ?? 1.0,
-        () => { setIsPlaying(false); resolve(); }
-      );
-    });
+    setIsPlaying(true);
+    return havenSpeak(message, selectedVoice.language, selectedVoice.rate ?? 1.0)
+      .finally(() => setIsPlaying(false));
   };
 
   const playBase64Audio = async (base64String: string) => {
@@ -258,44 +234,32 @@ export default function InteractiveTherapySession({ exercise, selectedVoice, onE
     }
   };
 
-  const startListening = () => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) {
-      toast.error('Speech recognition is not supported in this browser');
-      return;
-    }
+  const startListening = async () => {
+    const stt = new HavenSTT();
     setIsListening(true);
     toast.info('🎤 Listening... Speak now!');
 
-    const recognition = new SR();
-    recognition.lang = selectedVoice.language;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = async (e: any) => {
-      const result = e.results[0]?.[0];
-      const transcript = result?.transcript ?? '';
-      setIsListening(false);
-      if (transcript) {
-        await processTranscript(transcript);
-      } else {
-        toast.error('Could not understand your response. Please try again.');
+    await stt.start(
+      selectedVoice.language,
+      async (result) => {
+        setIsListening(false);
+        if (result.transcript) {
+          await processTranscript(result.transcript);
+        } else {
+          toast.error('Could not understand your response. Please try again.');
+          setWaitingForResponse(true);
+        }
+      },
+      (errMsg) => {
+        console.error('STT error:', errMsg);
+        toast.error(`Voice input failed: ${errMsg}`);
+        setIsListening(false);
         setWaitingForResponse(true);
       }
-    };
+    );
 
-    recognition.onerror = (e: any) => {
-      console.error('SpeechRecognition error:', e.error);
-      toast.error(`Voice input failed: ${e.error}`);
-      setIsListening(false);
-      setWaitingForResponse(true);
-    };
-
-    recognition.onend = () => setIsListening(false);
-    recognition.start();
-
-    // Store stop handle on ref so stopListening can cancel
-    mediaRecorderRef.current = { stop: () => recognition.stop() } as any;
+    // Store stop handle on ref so stopListening button works
+    mediaRecorderRef.current = { stop: () => stt.stop() } as any;
   };
 
   const stopListening = () => {

@@ -8,28 +8,7 @@ import { SpeechToTextInput } from '../SpeechToTextInput';
 import { AVAILABLE_VOICES, type VoiceOption } from '../../services/speechServices';
 import { useAuth } from '../auth/AuthProvider';
 import { toast } from 'sonner';
-
-// ── Browser TTS helper (no Firebase dependency) ──────────────────────────────
-function speakWithBrowserTTS(
-  text: string,
-  languageCode: string,
-  speakingRate: number = 1.0,
-  onEnd?: () => void
-): void {
-  if (!window.speechSynthesis) { console.warn('SpeechSynthesis not supported'); onEnd?.(); return; }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = languageCode;
-  utterance.rate = speakingRate;
-  const voices = window.speechSynthesis.getVoices();
-  const match = voices.find(v => v.lang === languageCode)
-    ?? voices.find(v => v.lang.startsWith(languageCode.split('-')[0]))
-    ?? null;
-  if (match) utterance.voice = match;
-  utterance.onend = () => onEnd?.();
-  utterance.onerror = (e) => { console.error('SpeechSynthesis error:', e); onEnd?.(); };
-  window.speechSynthesis.speak(utterance);
-}
+import { havenSpeak, havenSpeakStop } from '../../services/havenTTS';
 
 interface ConfidenceStep {
   id: number;
@@ -211,6 +190,7 @@ export default function ConfidenceBuilderSession() {
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      havenSpeakStop();
     };
   }, [selectedVoice.language]);
 
@@ -220,11 +200,13 @@ export default function ConfidenceBuilderSession() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const speakText = (text: string) => {
-    speakWithBrowserTTS(
+  const speakText = async (text: string) => {
+    havenSpeakStop();
+    await havenSpeak(
       text,
       selectedVoice.language || 'en-IN',
-      selectedVoice.rate || 1.0
+      selectedVoice.rate || 1.0,
+      selectedVoice.backendVoiceId
     );
   };
 
