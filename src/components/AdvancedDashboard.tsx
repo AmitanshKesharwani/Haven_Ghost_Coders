@@ -38,8 +38,18 @@ export function AdvancedDashboard({ userId, navigateTo }: AdvancedDashboardProps
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboardData();
-  }, [userId]);
+    // Poll for currentUser since auth resolves async after mount.
+    // Keeping only [userId] in deps avoids the autofix stripping currentUser.
+    let alive = true;
+    (async () => {
+      for (let i = 0; i < 40; i++) { // wait up to 10s
+        if (currentUser || !alive) break;
+        await new Promise(r => setTimeout(r, 250));
+      }
+      if (alive) loadDashboardData();
+    })();
+    return () => { alive = false; };
+  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadDashboardData = async () => {
     if (!currentUser) return;

@@ -192,6 +192,9 @@ export class GoogleCloudMentalHealthAI {
         throw new Error('Received empty response from Gemini');
       }
 
+      // Strip any raw reasoning/thinking traces before showing to user
+      generatedText = stripReasoning(generatedText);
+
       const parsed = this.parseResponse(generatedText, context);
       console.log('✅ Final message to user:', parsed.message.substring(0, 100) + '...');
       
@@ -342,7 +345,7 @@ Return ONLY this JSON structure (no markdown, no explanations):
       const parsed = JSON.parse(cleanedResponse);
 
       return {
-        message: parsed.message || generatedText,
+        message: stripReasoning(parsed.message || generatedText),
         originalLanguage: context.userProfile?.preferredLanguage || 'mixed',
         detectedLanguage: parsed.detectedLanguage || 'Unknown',
         emotionalTone: parsed.emotionalTone || 'supportive',
@@ -361,7 +364,7 @@ Return ONLY this JSON structure (no markdown, no explanations):
       console.warn('⚠️ Could not parse JSON, using raw text');
       console.warn('Raw response:', generatedText.substring(0, 200));
       return {
-        message: generatedText,
+        message: stripReasoning(generatedText),
         originalLanguage: context.userProfile?.preferredLanguage || 'mixed',
         detectedLanguage: 'Unknown',
         emotionalTone: 'supportive',
@@ -378,6 +381,105 @@ Return ONLY this JSON structure (no markdown, no explanations):
       };
     }
   }
+}
+
+/**
+ * Strips internal reasoning/thinking/drafting traces from AI model output.
+ *
+ * Strategy: instead of chasing ever-changing reasoning format patterns,
+ * we identify what a REAL reply looks like — plain conversational prose —
+ * and discard everything that is clearly meta/structural content.
+ *
+ * A line is "meta" if it:
+ *   - Starts with a number + period/bracket (numbered list step)
+ *   - Starts with * followed by a label like "Structure:", "Context:", etc.
+ *   - Contains bullet-point analysis markers
+ *   - Is a section header like "Word count check", "Tone check", etc.
+ *
+ * A line is "reply" if it reads as natural human conversation.
+ */
+function stripReasoning(text: string): string {
+  if (!text) return text;
+
+  // Remove <think>...</think> blocks (DeepSeek-R1 / QwQ style)
+  let out = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+  // If it doesn't look like a reasoning dump at all, return as-is
+  const looksLikeReasoning = /^\s*\d+[\.\)]\s|\bAnalyze the Request\b|\bDeconstruct\b|\bDrafting\b|\bReview and Refine\b|\bWord count\b|\bTone check\b|\bStructure check\b|\bCULTURAL CONTEXT\b|User Emotional State.*→|\bthe prompt says\b/im.test(out);
+  if (!looksLikeReasoning) return out;
+
+  // First try: extract quoted reply paragraphs (model wraps its reply in "...")
+  const quotedBlocks: string[] = [];
+  const quoteRegex = /["""«]([^"""»]{25,})["""»]/g;
+  let m: RegExpExecArray | null;
+  while ((m = quoteRegex.exec(out)) !== null) {
+    const c = m[1].trim();
+    if (!/Respond with|the prompt says|CURRENT USER|confidence is above|intensity:|below 0\.|Structure:|Context:/i.test(c)) {
+      quotedBlocks.push(c);
+    }
+  }
+  if (quotedBlocks.length >= 2) return quotedBlocks.join('\n\n').trim();
+
+  // Second try: split into lines and classify each as meta or reply
+  const lines = out.split('\n');
+
+  // A line is meta if it matches any of these patterns
+  const isMetaLine = (line: string): boolean => {
+    const t = line.trim();
+    if (!t) return false;
+    return (
+      // Numbered step headers: "1.", "2.", "1)", etc.
+      /^\d+[\.\)]\s/.test(t) ||
+      // Bullet labels: "* Structure:", "* Context:", "* Word count"
+      /^\*\s*(Structure|Context|Cultural|Word count|Tone|Reflect|Normalize|Practical|Follow|Deconstruct|Draft|Review|Paragraph|Warm|Mentions|Target|Perfect|Yes\b|No\b)/i.test(t) ||
+      // Arrow analysis lines: "-> ..."
+      /^->\s/.test(t) ||
+      // Pure meta headers
+      /^(Word count check|Tone check|Structure check|Cultural|Context check|Review and Refine|Drafting|Analyze the Request|Deconstruct|Thinking Process)/i.test(t) ||
+      // Lines containing reasoning markers inline
+      /User Emotional State.*intensity|CURRENT USER EMOTIONAL STATE|the prompt says|Word count check|Tone check:|Structure check:/i.test(t)
+    );
+  };
+
+  // Collect contiguous blocks of reply lines
+  // A "reply block" is a group of consecutive non-meta lines of reasonable length
+  const replyBlocks: string[][] = [];
+  let currentBlock: string[] = [];
+
+  for (const line of lines) {
+    if (isMetaLine(line)) {
+      if (currentBlock.length > 0) {
+        replyBlocks.push(currentBlock);
+        currentBlock = [];
+      }
+    } else if (line.trim().length > 0) {
+      currentBlock.push(line);
+    } else {
+      // Empty line — end current block
+      if (currentBlock.length > 0) {
+        replyBlocks.push(currentBlock);
+        currentBlock = [];
+      }
+    }
+  }
+  if (currentBlock.length > 0) replyBlocks.push(currentBlock);
+
+  // Pick the longest reply block(s) that together look like a real response
+  const scored = replyBlocks
+    .map(block => ({ block, text: block.join(' ').trim(), len: block.join(' ').length }))
+    .filter(b => b.len > 30 && !isMetaLine(b.text));
+
+  if (scored.length > 0) {
+    // Sort by length descending, take the top blocks that form the reply
+    scored.sort((a, b) => b.len - a.len);
+    // If there's one dominant block, use it; otherwise join the top few
+    const result = scored.slice(0, 4).map(b => b.text).join('\n\n').trim();
+    if (result.length > 20) return result;
+  }
+
+  // Last resort
+  if (quotedBlocks.length === 1) return quotedBlocks[0];
+  return "I hear you. I'm here for you — what's been on your mind?";
 }
 
 // Export singleton instance
