@@ -299,7 +299,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({ onStartNewSessio
                         </span>
                         <span className="flex items-center space-x-1">
                           <MessageCircle className="w-3 h-3" />
-                          <span>{session.interactions.length} interactions</span>
+                          <span>{(session.interactions || []).length} interactions</span>
                         </span>
                       </div>
                     </div>
@@ -326,14 +326,14 @@ export const SessionManager: React.FC<SessionManagerProps> = ({ onStartNewSessio
                 </div>
 
                 {/* Risk Assessments */}
-                {session.riskAssessments.length > 0 && (
+                {(session.riskAssessments || []).length > 0 && (
                   <div className="mt-3 pt-3 border-t">
                     <div className="flex items-center space-x-2">
                       <AlertTriangle className="w-4 h-4 text-yellow-500" />
                       <span className="text-sm text-yellow-700">
-                        Risk assessments: {session.riskAssessments.length}
+                        Risk assessments: {(session.riskAssessments || []).length}
                       </span>
-                      {session.riskAssessments.some(r => r.level !== 'none') && (
+                      {session.riskAssessments?.some(r => r.level !== 'none') && (
                         <Badge variant="destructive" className="text-xs">
                           Attention needed
                         </Badge>

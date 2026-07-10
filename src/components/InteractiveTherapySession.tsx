@@ -350,7 +350,7 @@ export default function InteractiveTherapySession({ exercise, selectedVoice, onE
   const provideFeedback = async (analysis: VoiceAnalysis) => {
     const exerciseSteps = stepContent[exercise.id as keyof typeof stepContent];
     const stepData = exerciseSteps?.[currentStep as keyof typeof exerciseSteps];
-    const feedback = stepData?.feedback;
+    const feedback = stepData?.feedback as any;
     
     let feedbackMessage = '';
     let points = 0;

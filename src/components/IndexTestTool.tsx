@@ -29,7 +29,7 @@ export function IndexTestTool() {
       },
       {
         name: 'Chat Conversations',
-        test: () => supabaseService.getChatConversations(currentUser!.uid)
+        test: () => supabaseService.getChatConversations(currentUser!.id)
       },
       {
         name: 'Progress Data',

@@ -21,7 +21,7 @@ export const QuickSetup: React.FC = () => {
     try {
       // 1. Create a simple journal entry
       await firebaseService.createJournalEntry({
-        userId: currentUser.uid,
+        userId: currentUser.id,
         title: 'Welcome to Haven!',
         content: 'This is your first journal entry. Haven is here to support your mental health journey with AI-powered insights and personalized care.',
         mood: 'happy',
@@ -34,7 +34,7 @@ export const QuickSetup: React.FC = () => {
 
       // 2. Create a mood entry
       await firebaseService.createMoodEntry({
-        userId: currentUser.uid,
+        userId: currentUser.id,
         mood: 8,
         energy: 7,
         anxiety: 3,
@@ -46,7 +46,7 @@ export const QuickSetup: React.FC = () => {
 
       // 3. Create app settings
       await firebaseService.saveAppSettings({
-        userId: currentUser.uid,
+        userId: currentUser.id,
         theme: 'auto',
         language: 'mixed',
         notifications: {
@@ -82,7 +82,7 @@ export const QuickSetup: React.FC = () => {
       });
 
       // 4. Create a conversation
-      const conversationId = await createConversation(currentUser.uid, 'general', 'supportive');
+      const conversationId = await createConversation(currentUser.id, 'general', 'supportive');
 
       // 5. Add a welcome message
       await addMessage(

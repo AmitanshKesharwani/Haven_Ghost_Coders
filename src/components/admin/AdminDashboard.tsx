@@ -158,15 +158,15 @@ export const AdminDashboard: React.FC = () => {
                   <p><strong>Language:</strong> {userProfile.preferences.language}</p>
                   <p><strong>Cultural Background:</strong> {userProfile.preferences.culturalBackground}</p>
                   <p><strong>Communication Style:</strong> {userProfile.preferences.communicationStyle}</p>
-                  <p><strong>Interests:</strong> {userProfile.preferences.interests.join(', ') || 'None'}</p>
+                  <p><strong>Interests:</strong> {(userProfile.preferences.interests || []).join(', ') || 'None'}</p>
                   <p><strong>Notifications:</strong> {userProfile.preferences.notificationsEnabled ? '✅ On' : '❌ Off'}</p>
                 </div>
 
                 <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '0.5rem' }}>
                   <h3>Mental Health Profile</h3>
                   <p><strong>Risk Level:</strong> {userProfile.mentalHealthProfile.currentRiskLevel}</p>
-                  <p><strong>Primary Concerns:</strong> {userProfile.mentalHealthProfile.primaryConcerns.join(', ') || 'None'}</p>
-                  <p><strong>Goals:</strong> {userProfile.mentalHealthProfile.goals.join(', ') || 'None'}</p>
+                  <p><strong>Primary Concerns:</strong> {(userProfile.mentalHealthProfile.primaryConcerns || []).join(', ') || 'None'}</p>
+                  <p><strong>Goals:</strong> {(userProfile.mentalHealthProfile.goals || []).join(', ') || 'None'}</p>
                   <p><strong>PHQ-9 Score:</strong> {userProfile.mentalHealthProfile.phq9Score || 'Not assessed'}</p>
                   <p><strong>GAD-7 Score:</strong> {userProfile.mentalHealthProfile.gad7Score || 'Not assessed'}</p>
                 </div>

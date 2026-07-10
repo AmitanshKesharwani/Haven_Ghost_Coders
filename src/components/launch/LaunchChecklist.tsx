@@ -94,7 +94,7 @@ export const LaunchChecklist: React.FC = () => {
     // 1. Check Authentication
     updateChecklistItem('auth', 'checking');
     try {
-      if (currentUser.uid && currentUser.email) {
+      if (currentUser.id && currentUser.email) {
         updateChecklistItem('auth', 'success', `User: ${currentUser.email}`);
       } else {
         updateChecklistItem('auth', 'error', 'Incomplete user data');
@@ -106,7 +106,7 @@ export const LaunchChecklist: React.FC = () => {
     // 2. Check User Profile
     updateChecklistItem('user-profile', 'checking');
     try {
-      const profile = await firebaseService.getUserProfile(currentUser.uid);
+      const profile = await firebaseService.getUserProfile(currentUser.id);
       if (profile) {
         updateChecklistItem('user-profile', 'success', `Profile complete: ${profile.onboardingComplete ? 'Yes' : 'No'}`);
       } else {
@@ -119,7 +119,7 @@ export const LaunchChecklist: React.FC = () => {
     // 3. Check Journal System
     updateChecklistItem('journal', 'checking');
     try {
-      const journals = await firebaseService.getJournalEntries(currentUser.uid, 5);
+      const journals = await firebaseService.getJournalEntries(currentUser.id, 5);
       if (journals.length >= 0) {
         updateChecklistItem('journal', 'success', `${journals.length} journal entries found`);
       } else {
@@ -135,7 +135,7 @@ export const LaunchChecklist: React.FC = () => {
     try {
       // const endDate = new Date();
       // const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const moods = await firebaseService.getMoodEntries(currentUser.uid, 50);
+      const moods = await firebaseService.getMoodEntries(currentUser.id, 50);
       if (moods.length >= 0) {
         updateChecklistItem('mood-tracking', 'success', `${moods.length} mood entries found`);
       } else {
@@ -149,7 +149,7 @@ export const LaunchChecklist: React.FC = () => {
     // 5. Check Chat System
     updateChecklistItem('chat-system', 'checking');
     try {
-      const conversations = await getUserConversations(currentUser.uid);
+      const conversations = await getUserConversations(currentUser.id);
       if (conversations.length >= 0) {
         updateChecklistItem('chat-system', 'success', `${conversations.length} conversations found`);
       } else {
@@ -163,7 +163,7 @@ export const LaunchChecklist: React.FC = () => {
     // 6. Check Assessments
     updateChecklistItem('assessments', 'checking');
     try {
-      const assessments = await firebaseService.getUserAssessments(currentUser.uid);
+      const assessments = await firebaseService.getUserAssessments(currentUser.id);
       if (assessments.length >= 0) {
         updateChecklistItem('assessments', 'success', `${assessments.length} assessments found`);
       } else {
@@ -177,7 +177,7 @@ export const LaunchChecklist: React.FC = () => {
     // 7. Check Settings
     updateChecklistItem('settings', 'checking');
     try {
-      const settings = await firebaseService.getAppSettings(currentUser.uid);
+      const settings = await firebaseService.getAppSettings(currentUser.id);
       updateChecklistItem('settings', 'success', settings ? 'Settings configured' : 'Default settings applied');
     } catch (error) {
       updateChecklistItem('settings', 'error', 'Settings check failed');
@@ -186,7 +186,7 @@ export const LaunchChecklist: React.FC = () => {
     // 8. Check Analytics
     updateChecklistItem('analytics', 'checking');
     try {
-      const analytics = await firebaseService.getUserAnalytics(currentUser.uid, 30);
+      const analytics = await firebaseService.getUserAnalytics(currentUser.id, 30);
       if (analytics) {
         updateChecklistItem('analytics', 'success', 'Analytics data available');
       } else {

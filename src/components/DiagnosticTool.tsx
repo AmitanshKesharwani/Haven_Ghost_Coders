@@ -77,7 +77,7 @@ export function DiagnosticTool() {
 
     // Test 4: Mood Entries
     try {
-      const moods = await supabaseService.getMoodEntries(currentUser!.uid, 5);
+      const moods = await supabaseService.getMoodEntries(currentUser!.id, 5);
       addResult({
         category: 'Database',
         test: 'Mood Entries',
@@ -96,7 +96,7 @@ export function DiagnosticTool() {
 
     // Test 5: Chat Conversations
     try {
-      const conversations = await supabaseService.getChatConversations(currentUser!.uid, 5);
+      const conversations = await supabaseService.getChatConversations(currentUser!.id, 5);
       addResult({
         category: 'Database',
         test: 'Chat Conversations',
@@ -115,7 +115,7 @@ export function DiagnosticTool() {
 
     // Test 6: Progress Data
     try {
-      const progress = await supabaseService.getProgressData(currentUser!.uid, 5);
+      const progress = await supabaseService.getProgressData(currentUser!.id, 5);
       addResult({
         category: 'Database',
         test: 'Progress Data',

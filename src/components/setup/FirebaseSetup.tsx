@@ -43,7 +43,7 @@ export const FirebaseSetup: React.FC = () => {
       addResult('Clearing any existing demo entries...');
       
       try {
-        const existingEntries = await firebaseService.getJournalEntries(currentUser.uid, 50);
+        const existingEntries = await firebaseService.getJournalEntries(currentUser.id, 50);
         const demoEntries = existingEntries.filter(entry => 
           entry.title.includes('My First Day with Haven') ||
           entry.title.includes('Dealing with Work Stress') ||
@@ -70,7 +70,7 @@ export const FirebaseSetup: React.FC = () => {
         const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
         const mood = Math.floor(Math.random() * 4) + 6; // 6-10 range
         const entry = {
-          userId: currentUser.uid,
+          userId: currentUser.id,
           mood: mood,
           energy: Math.floor(Math.random() * 3) + 7,
           anxiety: Math.floor(Math.random() * 4) + 2,
@@ -90,7 +90,7 @@ export const FirebaseSetup: React.FC = () => {
 
       // 3. Create Chat Conversation
       addResult('Creating chat conversation...');
-      const conversationId = await createConversation(currentUser.uid, 'therapy', 'supportive');
+      const conversationId = await createConversation(currentUser.id, 'therapy', 'supportive');
 
       // Add messages to conversation
       const messages = [
@@ -142,7 +142,7 @@ export const FirebaseSetup: React.FC = () => {
       // 4. Create Assessment Results
       addResult('Creating assessment results...');
       const assessmentResult = {
-        userId: currentUser.uid,
+        userId: currentUser.id,
         assessmentType: 'phq9' as const,
         completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
         responses: {
@@ -170,7 +170,7 @@ export const FirebaseSetup: React.FC = () => {
       // 5. Create Progress Data
       addResult('Creating progress tracking data...');
       const progressData = {
-        userId: currentUser.uid,
+        userId: currentUser.id,
         date: new Date(),
         metrics: {
           overallWellbeing: 7,
@@ -209,7 +209,7 @@ export const FirebaseSetup: React.FC = () => {
       // 6. Create App Settings
       addResult('Creating app settings...');
       const appSettings = {
-        userId: currentUser.uid,
+        userId: currentUser.id,
         theme: 'auto' as const,
         language: 'mixed' as const,
         notifications: {
@@ -250,7 +250,7 @@ export const FirebaseSetup: React.FC = () => {
       addResult('Creating sample crisis event...');
       try {
         const crisisEvent = {
-          userId: currentUser.uid,
+          userId: currentUser.id,
           timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
           severity: 'moderate' as const,
           triggerMessage: 'I feel like everything is falling apart and I can\'t handle it anymore',
@@ -274,7 +274,7 @@ export const FirebaseSetup: React.FC = () => {
 
       // 8. Update User Profile with more data
       addResult('Updating user profile...');
-      await firebaseService.updateUserProfile(currentUser.uid, {
+      await firebaseService.updateUserProfile(currentUser.id, {
         preferences: {
           language: 'mixed',
           culturalBackground: 'indian',

@@ -188,7 +188,7 @@ export const Settings: React.FC<SettingsProps> = ({ navigateTo }) => {
   };
 
   const handleLanguageChange = async (language: string) => {
-    setSelectedLanguage(language);
+    setSelectedLanguage(language as any);
     try {
       await updateUserProfile({
         preferences: {

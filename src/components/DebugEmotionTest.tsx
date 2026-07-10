@@ -46,7 +46,7 @@ export const DebugEmotionTest: React.FC<DebugEmotionTestProps> = ({ navigateTo }
       updateResult('camera', 'success', 'Camera access granted');
     } catch (error) {
       console.error('❌ Camera test failed:', error);
-      updateResult('camera', 'error', `Camera failed: ${error.message}`, error);
+      updateResult('camera', 'error', `Camera failed: ${(error as any).message}`, error);
     }
 
     // Test 2: Supabase Edge Function Connection
@@ -157,8 +157,8 @@ export const DebugEmotionTest: React.FC<DebugEmotionTestProps> = ({ navigateTo }
 
     } catch (error) {
       console.error('❌ Real image test failed:', error);
-      updateResult('real-image-test', 'error', `Real image test failed: ${error.message}`, error);
-      toast.error(`Real image test failed: ${error.message}`);
+      updateResult('real-image-test', 'error', `Real image test failed: ${(error as any).message}`, error);
+      toast.error(`Real image test failed: ${(error as any).message}`);
     }
   };
 

@@ -27,7 +27,7 @@ from app.config import (
     DEVICE,
     PIPER_VOICES_DIR,
     XTTS_MODEL_ID,
-    XTTS_SPEAKER_REFS,
+    XTTS_VOICES,
 )
 
 router = APIRouter()
@@ -37,6 +37,7 @@ class SpeakRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=2000)
     language: str = Field("en", description="'en' or 'hi' — extend config.py for more")
     voice: str | None = Field(None, description="Piper only: explicit voice name override")
+    voice_id: str | None = Field(None, description="XTTS: specific voice_id to use for the language")
 
 
 # ── Piper (CPU) ─────────────────────────────────────────────────────────
@@ -90,13 +91,19 @@ def _load_xtts():
 
 
 def _speak_xtts(req: SpeakRequest) -> bytes:
-    speaker_wav = XTTS_SPEAKER_REFS.get(req.language)
-    if not speaker_wav:
-        raise HTTPException(status_code=422, detail=f"No XTTS reference clip configured for language '{req.language}'")
+    # Resolve voice entry based on language and optional voice_id
+    language_voices = XTTS_VOICES.get(req.language)
+    if not language_voices:
+        raise HTTPException(status_code=422, detail=f"No XTTS voice configuration for language '{req.language}'")
+    if req.voice_id:
+        voice_entry = next((v for v in language_voices if v["voice_id"] == req.voice_id), None)
+        if not voice_entry:
+            raise HTTPException(status_code=422, detail=f"voice_id '{req.voice_id}' not found for language '{req.language}'")
+    else:
+        voice_entry = language_voices[0]
+    speaker_wav = voice_entry["ref_clip_path"]
 
     tts = _load_xtts()
-    # XTTS writes to a file path rather than returning bytes directly —
-    # use a temp file to avoid disk churn under load.
     import tempfile
     with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
         tts.tts_to_file(text=req.text, speaker_wav=speaker_wav, language=req.language, file_path=tmp.name)
@@ -108,3 +115,11 @@ def _speak_xtts(req: SpeakRequest) -> bytes:
 def speak(req: SpeakRequest, speed: float = Query(1.0, ge=0.5, le=2.0, description="Piper synthesis speed (1.0 = default)")):
     audio_bytes = _speak_piper(req, speed) if DEVICE == "cpu" else _speak_xtts(req)
     return StreamingResponse(io.BytesIO(audio_bytes), media_type="audio/wav")
+
+
+@router.get("/voices")
+def list_voices():
+    """Return the full list of XTTS voice options per language.
+    Structure: {language: [{voice_id, name, description, ref_clip_path}, ...]}
+    """
+    return XTTS_VOICES

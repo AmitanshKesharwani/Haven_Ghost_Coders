@@ -184,13 +184,37 @@ class SpeechToTextService {
   }
 
   /**
+   * Get supported languages list.
+   */
+  getSupportedLanguages(): { code: string; name: string; nativeName: string }[] {
+    return [
+      { code: 'en-IN', name: 'English', nativeName: 'English (India)' },
+      { code: 'hi-IN', name: 'Hindi', nativeName: 'हिंदी' },
+      { code: 'bn-IN', name: 'Bengali', nativeName: 'বাংলা' },
+      { code: 'mr-IN', name: 'Marathi', nativeName: 'मराठी' },
+      { code: 'ta-IN', name: 'Tamil', nativeName: 'தமிழ்' },
+      { code: 'te-IN', name: 'Telugu', nativeName: 'తెలుగు' },
+      { code: 'gu-IN', name: 'Gujarati', nativeName: 'ગુજરાતી' },
+      { code: 'kn-IN', name: 'Kannada', nativeName: 'ಕನ್ನಡ' },
+      { code: 'ml-IN', name: 'Malayalam', nativeName: 'മലയാളം' },
+      { code: 'pa-IN', name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ' },
+      { code: 'or-IN', name: 'Odia', nativeName: 'ଓଡ଼ିଆ' },
+      { code: 'as-IN', name: 'Assamese', nativeName: 'অসমীয়া' },
+      { code: 'ur-IN', name: 'Urdu', nativeName: 'اردو' },
+      { code: 'en-US', name: 'English (US)', nativeName: 'English (US)' },
+      { code: 'en-GB', name: 'English (UK)', nativeName: 'English (UK)' },
+    ];
+  }
+
+  /**
    * Get current status.
    */
-  getStatus(): { isRecording: boolean; isSupported: boolean; method: 'selfhosted' | 'none' } {
+  getStatus(): { isRecording: boolean; isSupported: boolean; method: 'selfhosted' | 'none' | 'webspeech' | 'googleapi'; hasApiKey: boolean } {
     return {
       isRecording: this.isRecording,
       isSupported: this.isSupported(),
       method: this.isSupported() ? 'selfhosted' : 'none',
+      hasApiKey: true,
     };
   }
 
