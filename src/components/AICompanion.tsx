@@ -6,7 +6,7 @@ import { ArrowLeft, Send, User, Heart, AlertTriangle, Phone, Mic, MicOff, Video,
 import type { Screen, UserData } from '../types';
 import { type AIResponse } from '../services/googleCloudAI';
 import { aiOrchestrator, type ActivityRecommendation, type ConversationContext } from '../services/aiOrchestrator';
-import { assessCrisisLevel, shouldShowCrisisResources } from '../utils/crisisDetection';
+import { evaluateCrisis, shouldShowCrisisResources } from '../utils/crisisDetection';
 import { useAuth } from './auth/AuthProvider';
 import { useFirebaseSession } from '../hooks/useFirebaseSession';
 
@@ -216,8 +216,8 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
   const [showConversationList, setShowConversationList] = useState(false); // For sidebar toggle
   const [currentRecommendations, setCurrentRecommendations] = useState<ActivityRecommendation[]>([]);
   
-  // *** CHIRP3 VOICE SELECTION STATE ***
-  const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(AVAILABLE_VOICES[0]); // Default to first Chirp3 voice
+  // *** VOICE SELECTION STATE ***
+  const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(AVAILABLE_VOICES[0]); // Default to first voice
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   
   // *** END NEW STATE ***
@@ -676,8 +676,9 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
     const messageText = voiceAnalysis?.transcript || inputValue.trim();
     if (!messageText || !currentUser) return;
 
-    // 🚨 Crisis detection
-    const crisisAssessment = assessCrisisLevel(messageText);
+    // 🚨 Crisis detection (parallel keyword & classifier)
+    const { assessment: crisisAssessment, triggeredBy } = await evaluateCrisis(messageText);
+    if (import.meta.env.DEV) console.log(`[crisis] assessment triggered by: ${triggeredBy}`);
 
     // Crisis detection and conversation creation logic will be handled in the new implementation
 
@@ -1091,7 +1092,7 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
               <Card className="p-4 mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 rounded-xl shadow-lg">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">🎤 Chirp3 HD Voice Settings</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">🎤 Voice Settings</h3>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1162,7 +1163,7 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
                   </div>
                   
                   <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                    <strong>🚀 Chirp3 HD Technology:</strong> These voices use Google's latest generative AI for ultra-realistic, emotionally resonant speech perfect for mental health support.
+                    <strong>🚀 Self‑hosted AI Backend:</strong> These voices use our self‑hosted AI backend for high‑quality, emotionally resonant speech.
                   </div>
                 </div>
               </Card>
@@ -1275,13 +1276,13 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
                                 hour12: false
                               })}
                             </p>
-                            {/* --- UPDATED: Read Aloud Button for AI messages with Chirp3 --- */}
+                            {/* Read Aloud Button for AI messages */}
                             {message.sender === 'ai' && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="w-8 h-8 text-muted-foreground hover:text-primary hover:bg-primary/10 disabled:opacity-50 rounded-full transition-all duration-200"
-                                title={`Read aloud with ${selectedVoice.name} (Chirp3 HD)`}
+                                title={`Read aloud with ${selectedVoice.name}`}
                                 // Pass the entire message object to handleReadAloud
                                 onClick={() => handleReadAloud(message)}
                                 disabled={isVoicePlaying}

@@ -1,4 +1,4 @@
-// React Hook for Speech-to-Text with Google Chirp 3 Model
+// React Hook for Speech-to-Text using self-hosted backend
 // Provides reactive speech recognition with real-time updates
 
 import { useState, useEffect, useCallback } from 'react';
@@ -123,8 +123,8 @@ export function useSpeechToText(): UseSpeechToTextReturn {
       
       speechToTextService.stopRecording();
       
-      toast.info('🔄 Processing speech with Chirp 3...');
-      console.log('🛑 Stopped recording, processing with Chirp 3');
+      toast.info('🔄 Processing speech...');
+      console.log('🛑 Stopped recording, processing audio');
     }
   }, [isRecording]);
 

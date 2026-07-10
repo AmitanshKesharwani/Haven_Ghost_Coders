@@ -146,6 +146,64 @@ export function assessCrisisLevel(text: string): CrisisAssessment {
   };
 }
 
+// Parallel crisis detection function
+export async function evaluateCrisis(text: string): Promise<{ assessment: CrisisAssessment; triggeredBy: string }> {
+  // Run keyword scan and classifier in parallel
+  const keywordPromise = Promise.resolve(assessCrisisLevel(text));
+  const classifierPromise = (async () => {
+    try {
+      const backendUrl = (import.meta && import.meta.env && import.meta.env.VITE_AI_BACKEND_URL) || process.env.VITE_AI_BACKEND_URL;
+      if (!backendUrl) throw new Error('VITE_AI_BACKEND_URL not configured');
+      const response = await fetch(`${backendUrl}/classify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      if (!response.ok) {
+        const txt = await response.text();
+        throw new Error(`Classifier error ${response.status}: ${txt}`);
+      }
+      const data = await response.json();
+      return data; // expected { risk_level: string }
+    } catch (err) {
+      console.error('[crisis] classifier request failed:', err);
+      return null;
+    }
+  })();
+
+  const [keywordAssessment, classifierResult] = await Promise.all([keywordPromise, classifierPromise]);
+
+  const keywordTriggered = ['moderate', 'high', 'severe'].includes(keywordAssessment.level);
+  const classifierTriggered = classifierResult && classifierResult.risk_level === 'high';
+  let triggeredBy = 'none';
+  if (keywordTriggered && classifierTriggered) triggeredBy = 'both';
+  else if (keywordTriggered) triggeredBy = 'keyword';
+  else if (classifierTriggered) triggeredBy = 'classifier';
+
+  // Merge classifier result into assessment if classifier indicates high risk
+  let finalAssessment = { ...keywordAssessment };
+  if (classifierTriggered) {
+    // Upgrade severity to at least 'high'
+    const levelPriority: Record<CrisisLevel, number> = { none: 0, low: 1, moderate: 2, high: 3, severe: 4 };
+    if (levelPriority[keywordAssessment.level] < levelPriority['high']) {
+      finalAssessment = {
+        ...keywordAssessment,
+        level: 'high',
+        confidence: Math.max(keywordAssessment.confidence, 0.8),
+        recommendedAction: 'crisis_resources',
+        // keep original immediateResponse (or could customize)
+        immediateResponse: keywordAssessment.immediateResponse,
+      };
+    }
+  }
+
+  return { assessment: finalAssessment, triggeredBy };
+}
+
+
+
+
+
 export function getCrisisResponse(assessment: CrisisAssessment, language: 'english' | 'hindi' | 'mixed' = 'mixed'): string {
   const responses = {
     severe: {

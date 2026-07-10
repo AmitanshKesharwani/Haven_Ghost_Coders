@@ -1,0 +1,16 @@
+# Local development — no GPU required. This is what you install today.
+# NOTE: torch 2.5.x is not available for Python 3.13+; using 2.7.1 (lowest available).
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pydantic==2.10.4
+
+# Crisis classifier
+transformers>=4.47.1
+torch==2.7.1
+
+# STT (CPU backend)
+faster-whisper>=1.1.0
+
+# TTS
+piper-tts==1.4.2

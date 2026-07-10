@@ -1,7 +1,6 @@
 // src/services/speechServices.ts
-// --- UPGRADED TO GOOGLE CHIRP 3 HD VOICES ---
-// Latest generative AI-powered Text-to-Speech technology
-// Delivers ultra-realistic voices with emotional resonance for mental health therapy
+// --- SELF-HOSTED AI BACKEND ---
+// Provides Text-to-Speech via the local AI backend.
 
 // This interface defines the structure for a voice option
 export interface VoiceOption {
@@ -12,15 +11,15 @@ export interface VoiceOption {
   accent: string;
   personality: 'calm' | 'energetic' | 'supportive' | 'professional' | 'friendly';
   description: string;
-  voiceURI?: string; // The *actual* Google Cloud voice name (e.g., "en-IN-Chirp3-HD-Aoede")
+  voiceURI?: string; // Optional identifier for backend TTS voice
   rate: number; // <-- pitch property removed
   volume: number;
 }
 
-// Google Chirp 3 HD Voices - Latest Generative AI TTS Technology
-// Ultra-realistic voices with emotional resonance for mental health therapy
+// AI Backend Voices - TTS Service
+// Speech synthesis via self-hosted backend.
 export const AVAILABLE_VOICES: VoiceOption[] = [
-  // --- English (India) - Chirp 3 HD Voices ---
+  // --- English (India) ---
   {
     id: 'sarah-supportive',
     name: 'Sarah',
@@ -28,8 +27,8 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'en-IN',
     accent: 'Indian English',
     personality: 'supportive',
-    description: 'Warm, caring therapist voice (Chirp 3 HD)',
-    voiceURI: 'en-IN-Chirp3-HD-Aoede', // <-- CORRECTED
+    description: 'Warm, caring therapist voice',
+    voiceURI: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -40,8 +39,8 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'en-IN',
     accent: 'Indian English',
     personality: 'friendly',
-    description: 'Encouraging friend voice (Chirp 3 HD)',
-    voiceURI: 'en-IN-Chirp3-HD-Puck', // <-- CORRECTED
+    description: 'Encouraging friend voice',
+    voiceURI: '',
     rate: 1.0,
     volume: 0.8
   },
@@ -52,12 +51,12 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'en-IN',
     accent: 'Indian English',
     personality: 'professional',
-    description: 'Professional therapist with emotional depth (Chirp 3 HD)',
-    voiceURI: 'en-IN-Chirp3-HD-Kore', // <-- CORRECTED (Used a different speaker)
+    description: 'Professional therapist with emotional depth',
+    voiceURI: '',
     rate: 0.85,
     volume: 0.8
   },
-  // --- Hindi - Chirp 3 HD Voices ---
+  // --- Hindi ---
   {
     id: 'priya-professional',
     name: 'Dr. Priya',
@@ -65,8 +64,8 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'hi-IN',
     accent: 'Hindi',
     personality: 'professional',
-    description: 'Professional therapist voice (Chirp 3 HD Hindi)',
-    voiceURI: 'hi-IN-Chirp3-HD-Aoede', // <-- CORRECTED
+    description: 'Professional therapist voice (Hindi)',
+    voiceURI: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -77,8 +76,8 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'hi-IN',
     accent: 'Hindi',
     personality: 'energetic',
-    description: 'Confident motivator voice (Chirp 3 HD Hindi)',
-    voiceURI: 'hi-IN-Chirp3-HD-Puck', // <-- CORRECTED
+    description: 'Confident motivator voice (Hindi)',
+    voiceURI: '',
     rate: 1.0,
     volume: 0.9
   },
@@ -89,12 +88,12 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'hi-IN',
     accent: 'Hindi',
     personality: 'supportive',
-    description: 'Compassionate guide with emotional warmth (Chirp 3 HD)',
-    voiceURI: 'hi-IN-Chirp3-HD-Kore', // <-- CORRECTED (Used a different speaker)
+    description: 'Compassionate guide with emotional warmth',
+    voiceURI: '',
     rate: 0.85,
     volume: 0.8
   },
-  // --- English (Global) - Chirp 3 HD Premium ---
+  // --- English (Global) ---
   {
     id: 'alex-calm',
     name: 'Alex',
@@ -102,8 +101,8 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'en-GB',
     accent: 'British English',
     personality: 'calm',
-    description: 'Soothing, meditative guide (Chirp 3 HD)',
-    voiceURI: 'en-GB-Chirp3-HD-Puck', // <-- CORRECTED
+    description: 'Soothing, meditative guide',
+    voiceURI: '',
     rate: 0.8,
     volume: 0.7
   },
@@ -114,12 +113,12 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'en-US',
     accent: 'American English',
     personality: 'energetic',
-    description: 'Motivational coach voice (Chirp 3 HD)',
-    voiceURI: 'en-US-Chirp3-HD-Aoede', // <-- CORRECTED
+    description: 'Motivational coach voice',
+    voiceURI: '',
     rate: 1.1,
     volume: 0.9
   },
-  // --- Regional Indian Languages - Chirp 3 HD ---
+  // --- Regional Indian Languages ---
   {
     id: 'aditi-friendly',
     name: 'Aditi',
@@ -127,8 +126,8 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'bn-IN',
     accent: 'Bengali',
     personality: 'friendly',
-    description: 'Supportive friend (Chirp 3 HD Bengali)',
-    voiceURI: 'bn-IN-Chirp3-HD-Aoede', // <-- CORRECTED
+    description: 'Supportive friend (Bengali)',
+    voiceURI: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -139,8 +138,8 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'mr-IN',
     accent: 'Marathi',
     personality: 'calm',
-    description: 'Calm guide (Chirp 3 HD Marathi)',
-    voiceURI: 'mr-IN-Chirp3-HD-Puck', // <-- CORRECTED
+    description: 'Calm guide (Marathi)',
+    voiceURI: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -151,8 +150,8 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'ta-IN',
     accent: 'Tamil',
     personality: 'supportive',
-    description: 'Warm and caring (Chirp 3 HD Tamil)',
-    voiceURI: 'ta-IN-Chirp3-HD-Aoede', // <-- CORRECTED
+    description: 'Warm and caring (Tamil)',
+    voiceURI: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -163,8 +162,8 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'te-IN',
     accent: 'Telugu',
     personality: 'energetic',
-    description: 'Motivational guide (Chirp 3 HD Telugu)',
-    voiceURI: 'te-IN-Chirp3-HD-Puck', // <-- CORRECTED
+    description: 'Motivational guide (Telugu)',
+    voiceURI: '',
     rate: 1.0,
     volume: 0.9
   },
@@ -175,8 +174,8 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'gu-IN',
     accent: 'Gujarati',
     personality: 'supportive',
-    description: 'Calm and supportive (Chirp 3 HD Gujarati)',
-    voiceURI: 'gu-IN-Chirp3-HD-Puck', // <-- CORRECTED
+    description: 'Calm and supportive (Gujarati)',
+    voiceURI: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -187,8 +186,8 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'kn-IN',
     accent: 'Kannada',
     personality: 'friendly',
-    description: 'Friendly companion (Chirp 3 HD Kannada)',
-    voiceURI: 'kn-IN-Chirp3-HD-Aoede', // <-- CORRECTED
+    description: 'Friendly companion (Kannada)',
+    voiceURI: '',
     rate: 0.9,
     volume: 0.8
   },
@@ -199,12 +198,11 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
     language: 'ml-IN',
     accent: 'Malayalam',
     personality: 'calm',
-    description: 'Soothing voice (Chirp 3 HD Malayalam)',
-    voiceURI: 'ml-IN-Chirp3-HD-Aoede', // <-- CORRECTED
+    description: 'Soothing voice (Malayalam)',
+    voiceURI: '',
     rate: 0.9,
     volume: 0.8
   }
 ];
 
-// We no longer export 'voiceAI' or 'speechService' because
-// the components now call the backend functions directly.
+// TTS is now handled via the self-hosted AI backend.

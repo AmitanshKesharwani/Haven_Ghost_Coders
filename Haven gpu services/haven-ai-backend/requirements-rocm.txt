@@ -1,0 +1,38 @@
+# AMD MI300X deployment — install this INSTEAD of requirements-cpu.txt on
+# the droplet. Do NOT pip install plain `torch` afterwards — that pulls the
+# CUDA wheel from PyPI and silently overwrites the ROCm build.
+#
+# Install order matters:
+#   1. Install ROCm-native PyTorch first (from AMD's repo, not PyPI)
+#   2. Then everything else
+#
+#   pip install --break-system-packages \
+#     "https://repo.radeon.com/rocm/manylinux/rocm-rel-6.2/torch-2.5.1%2Brocm6.2-cp311-cp311-linux_x86_64.whl"
+#
+#   pip install --break-system-packages -r requirements-rocm.txt
+#
+# Verify with: python -c "import torch; print(torch.cuda.is_available())"
+# (should print True — ROCm reports itself to PyTorch as "cuda")
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pydantic==2.10.4
+
+# Crisis classifier
+transformers==4.47.1
+
+# STT (GPU backend — plain transformers pipeline, NOT faster-whisper/
+# CTranslate2, since CTranslate2 has no official ROCm build)
+accelerate==1.2.1
+
+# TTS (GPU backend — Coqui XTTS-v2, NOT Piper. Piper's ONNX Runtime ROCm
+# execution provider is being phased out by AMD in favor of MIGraphX EP,
+# which needs custom repo.radeon.com wheels + system MIGraphX + the `half`
+# library — real setup friction. XTTS-v2 is pure PyTorch, so it just uses
+# the same ROCm PyTorch wheel already installed above. Also gives native
+# Hindi support, which matters for Haven and which Piper lacks.
+#
+# NOTE: weights are CPML-licensed (non-commercial) — fine for the hackathon,
+# swap for Kokoro or Piper later if Haven becomes a commercial product.
+coqui-tts==0.25.2
