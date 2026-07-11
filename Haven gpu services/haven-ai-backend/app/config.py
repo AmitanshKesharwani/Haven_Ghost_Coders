@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 """
 Central config for the Haven AI backend.
 
@@ -56,6 +59,18 @@ XTTS_VOICES = {
             "description": "Placeholder English voice 2",
             "ref_clip_path": str(BASE_DIR / "voices" / "xtts_ref_en_2.wav"),
         },
+        {
+            "voice_id": "en_male_1",
+            "name": "English Male Voice 1",
+            "description": "Stopgap: reuses en_2 clip until a dedicated male reference is recorded",
+            "ref_clip_path": str(BASE_DIR / "voices" / "xtts_ref_en_2.wav"),
+        },
+        {
+            "voice_id": "en_male_2",
+            "name": "English Male Voice 2",
+            "description": "Stopgap: reuses en_1 clip until a dedicated male reference is recorded",
+            "ref_clip_path": str(BASE_DIR / "voices" / "xtts_ref_en_1.wav"),
+        },
     ],
     "hi": [
         {
@@ -70,6 +85,12 @@ XTTS_VOICES = {
             "description": "Placeholder Hindi voice 2",
             "ref_clip_path": str(BASE_DIR / "voices" / "xtts_ref_hi_2.wav"),
         },
+        {
+            "voice_id": "hi_male_1",
+            "name": "Hindi Male Voice 1",
+            "description": "Stopgap: reuses hi_2 clip until a dedicated male reference is recorded",
+            "ref_clip_path": str(BASE_DIR / "voices" / "xtts_ref_hi_2.wav"),
+        },
     ],
 }
 
@@ -81,6 +102,7 @@ CLASSIFIER_MODEL_ID = os.getenv("CLASSIFIER_MODEL_ID", "sentinet/suicidality")
 # conservative (lower threshold = more sensitive) is safer for a mental
 # health product.
 CLASSIFIER_RISK_THRESHOLD = float(os.getenv("CLASSIFIER_RISK_THRESHOLD", "0.7"))
+CLASSIFIER_AMBIGUOUS_THRESHOLD = float(os.getenv("CLASSIFIER_AMBIGUOUS_THRESHOLD", "0.15"))
 
 # ── Server ───────────────────────────────────────────────────────────────
 HOST = os.getenv("HAVEN_HOST", "0.0.0.0")

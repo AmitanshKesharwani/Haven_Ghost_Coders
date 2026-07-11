@@ -85,6 +85,14 @@ def _speak_piper(req: SpeakRequest, speed: float = 1.0) -> bytes:
 @lru_cache(maxsize=1)
 def _load_xtts():
     import torch
+    import torchaudio
+    import soundfile as sf
+    def _safe_load(path, *args, **kwargs):
+        data, sr = sf.read(path, dtype="float32", always_2d=True)
+        wav = torch.from_numpy(data.T)  # (channels, samples), matches torchaudio's convention
+        return wav, sr
+
+    torchaudio.load = _safe_load
     from TTS.api import TTS
 
     return TTS(XTTS_MODEL_ID).to("cuda" if torch.cuda.is_available() else "cpu")

@@ -20,7 +20,7 @@ python-multipart==0.0.20
 pydantic==2.10.4
 
 # Crisis classifier
-transformers==4.47.1
+transformers==4.46.2
 
 # STT (GPU backend — plain transformers pipeline, NOT faster-whisper/
 # CTranslate2, since CTranslate2 has no official ROCm build)

@@ -1,0 +1,11 @@
+.venv/
+app/voices/*.onnx
+app/voices/*.onnx.json
+app/voices/xtts_ref_*.wav
+server.log
+warmup_test.wav
+__pycache__/
+*.pyc
+cloudflared.deb
+*.wav
+tunnel.log

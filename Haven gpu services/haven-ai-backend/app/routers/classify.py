@@ -5,14 +5,17 @@ This sits BEHIND the existing keyword scan in src/utils/crisisDetection.ts,
 not instead of it. Recommended flow on the frontend:
 
   1. Run the fast keyword scan locally (instant, no network call).
-  2. If the keyword scan flags anything (even low confidence), call this
-     endpoint with the last few user messages for a model-based second
-     opinion before deciding whether to show the crisis overlay.
+  2. ALSO call this endpoint in parallel on every user message, regardless
+     of what the keyword scan says — indirect phrasing ("I don't feel like
+     waking up tomorrow") won't trip keywords but can still register real
+     concern probability here.
+
+Confirmed via manual testing on this model:
+  LABEL_0 = non-concerning
+  LABEL_1 = concerning / suicide-risk
 
 Never rely on this model alone, and never rely on the keyword scan alone —
-they cover each other's blind spots (keywords catch explicit language the
-model might soften past; the model catches indirect/contextual language
-keywords miss entirely).
+they cover each other's blind spots.
 """
 from functools import lru_cache
 
@@ -20,7 +23,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from transformers import pipeline
 
-from app.config import CLASSIFIER_MODEL_ID, CLASSIFIER_RISK_THRESHOLD, DEVICE
+from app.config import CLASSIFIER_AMBIGUOUS_THRESHOLD, CLASSIFIER_MODEL_ID, CLASSIFIER_RISK_THRESHOLD, DEVICE
 
 router = APIRouter()
 
@@ -32,7 +35,8 @@ class ClassifyRequest(BaseModel):
 class ClassifyResponse(BaseModel):
     label: str
     score: float
-    risk_level: str  # "low" | "high"
+    concern_score: float  # raw probability of the concerning class, always present
+    risk_level: str  # "low" | "ambiguous" | "high"
     threshold: float
 
 
@@ -47,27 +51,39 @@ def get_classifier():
         "sentiment-analysis",
         model=CLASSIFIER_MODEL_ID,
         device=device_index,
+        top_k=None,  # return scores for BOTH classes, not just the winner
     )
 
 
 @router.post("/classify", response_model=ClassifyResponse)
 def classify(req: ClassifyRequest) -> ClassifyResponse:
     classifier = get_classifier()
-    result = classifier(req.text)[0]  # {'label': ..., 'score': ...}
+    # top_k=None returns a list like:
+    # [{'label': 'LABEL_0', 'score': 0.81}, {'label': 'LABEL_1', 'score': 0.19}]
+    all_scores = classifier(req.text)[0]
+    scores_by_label = {r["label"]: float(r["score"]) for r in all_scores}
 
-    label = result["label"]
-    score = float(result["score"])
+    concern_score = scores_by_label.get("LABEL_1", 0.0)
+    top_label = max(scores_by_label, key=scores_by_label.get)
+    top_score = scores_by_label[top_label]
 
-    # NOTE: confirm sentinet/suicidality's actual label names before relying
-    # on this in production — swap "SUICIDE"/"suicidal" below for whatever
-    # the model's config.json id2label actually reports. Log a few real
-    # outputs during testing and adjust.
-    is_flagged_label = label.lower() in {"label_1"}
-    risk_level = "high" if (is_flagged_label and score >= CLASSIFIER_RISK_THRESHOLD) else "low"
+    # Two thresholds, not one:
+    #   - HIGH: model is confident this is concerning -> flag immediately
+    #   - AMBIGUOUS: concern probability isn't dominant but isn't negligible
+    #     either -> this is exactly the indirect-phrasing case that a
+    #     single top-label check misses. Flag these too, and let the Qwen
+    #     LLM layer make the final call.
+    if concern_score >= CLASSIFIER_RISK_THRESHOLD:
+        risk_level = "high"
+    elif concern_score >= CLASSIFIER_AMBIGUOUS_THRESHOLD:
+        risk_level = "ambiguous"
+    else:
+        risk_level = "low"
 
     return ClassifyResponse(
-        label=label,
-        score=score,
+        label=top_label,
+        score=top_score,
+        concern_score=concern_score,
         risk_level=risk_level,
         threshold=CLASSIFIER_RISK_THRESHOLD,
     )
