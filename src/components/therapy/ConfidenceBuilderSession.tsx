@@ -163,16 +163,23 @@ export default function ConfidenceBuilderSession() {
   
   // Voice state - use passed voice or fallback
   const [selectedVoice] = useState<VoiceOption>(() => {
-    if (navigationState?.selectedVoice) {
+    // Prefer voice passed via navigation if it has backend support
+    if (navigationState?.selectedVoice && navigationState.selectedVoice.backendVoiceId) {
       return navigationState.selectedVoice;
     }
-    
+
+    // Try saved user preference that has backend support
     const savedVoiceURI = userProfile?.preferences?.selectedVoice;
     if (savedVoiceURI) {
-      const savedVoice = AVAILABLE_VOICES.find(v => v.voiceURI === savedVoiceURI || v.name === savedVoiceURI);
+      const savedVoice = AVAILABLE_VOICES.find(
+        v => (v.id === savedVoiceURI || v.name === savedVoiceURI) && v.backendVoiceId
+      );
       if (savedVoice) return savedVoice;
     }
-    return AVAILABLE_VOICES[0]!;
+
+    // Fallback to first voice with backendVoiceId
+    const fallback = AVAILABLE_VOICES.find(v => v.backendVoiceId);
+    return fallback ?? AVAILABLE_VOICES[0]!;
   });
 
   // Timer

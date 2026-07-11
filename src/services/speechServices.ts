@@ -34,13 +34,13 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
   },
   {
     id: 'raj-friendly',
-    name: 'Raj',
+    name: 'Riya',
     gender: 'male',
     language: 'en-IN',
     accent: 'Indian English',
     personality: 'friendly',
     description: 'Encouraging friend voice',
-    backendVoiceId: 'en_1',
+    backendVoiceId: 'en_male_1',
     rate: 1.0,
     volume: 0.8
   },
@@ -71,13 +71,13 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
   },
   {
     id: 'arjun-confident',
-    name: 'Arjun',
+    name: 'Anjali',
     gender: 'male',
     language: 'hi-IN',
     accent: 'Hindi',
     personality: 'energetic',
     description: 'Confident motivator voice (Hindi)',
-    backendVoiceId: 'hi_1',
+    backendVoiceId: 'hi_male_1',
     rate: 1.0,
     volume: 0.9
   },
@@ -96,25 +96,25 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
   // --- English (Global) ---
   {
     id: 'alex-calm',
-    name: 'Alex',
+    name: 'Alexa',
     gender: 'male',
     language: 'en-GB',
     accent: 'British English',
     personality: 'calm',
     description: 'Soothing, meditative guide',
-    backendVoiceId: 'en_1',
+    backendVoiceId: 'en_male_2',
     rate: 0.8,
     volume: 0.7
   },
   {
     id: 'maya-energetic',
-    name: 'Maya',
-    gender: 'female',
+    name: 'Milan',
+    gender: 'male',
     language: 'en-US',
     accent: 'American English',
     personality: 'energetic',
-    description: 'Motivational coach voice',
-    backendVoiceId: 'en_1',
+    description: 'Motivational coach voice (male)',
+    backendVoiceId: 'en_male_1',
     rate: 1.1,
     volume: 0.9
   },

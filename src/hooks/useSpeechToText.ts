@@ -55,17 +55,19 @@ export function useSpeechToText(): UseSpeechToTextReturn {
   // Handle errors
   const handleError = useCallback((err: Error) => {
     console.error('❌ Speech-to-text error:', err);
-    
+
     const errorMessage = err.message;
     setError(errorMessage);
     setIsRecording(false);
     setIsProcessing(false);
-    
-    // Show user-friendly error messages
+
+    // Provide user-friendly messages
     if (errorMessage.includes('not-allowed') || errorMessage.includes('permission')) {
-      toast.error('🎤 Microphone permission denied. Please allow microphone access.');
+      toast.error('🎤 Microphone permission denied. Please allow microphone access in your browser settings.');
     } else if (errorMessage.includes('not supported') || errorMessage.includes('unavailable')) {
       toast.error('🚫 Speech recognition not supported in this browser. Try Chrome or Edge.');
+    } else if (errorMessage.includes('VITE_AI_BACKEND_URL') || errorMessage.includes('Backend STT error')) {
+      toast.error('🌐 Unable to reach Speech-to-Text backend. Verify that VITE_AI_BACKEND_URL is correctly set and the server is running.');
     } else if (errorMessage.includes('network') || errorMessage.includes('API')) {
       toast.error('🌐 Network error. Please check your internet connection.');
     } else {

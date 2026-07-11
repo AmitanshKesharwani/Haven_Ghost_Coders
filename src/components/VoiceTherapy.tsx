@@ -295,6 +295,9 @@ export default function VoiceTherapy() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-sm text-black">{voice.name}</p>
+                          {(!voice.backendVoiceId) && (
+                            <span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-medium">Coming Soon</span>
+                          )}
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             voice.personality === 'supportive' ? 'bg-green-100 text-green-700' :
                             voice.personality === 'professional' ? 'bg-blue-100 text-blue-700' :
@@ -307,30 +310,32 @@ export default function VoiceTherapy() {
                         </div>
                         <p className="text-xs text-black/60">{voice.accent} • {voice.description}</p>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          testVoice(voice);
-                        }}
-                        disabled={testingVoice === voice.id}
-                        className={`ml-2 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                          testingVoice === voice.id
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-blue-500 text-white hover:bg-blue-600'
-                        }`}
-                      >
-                        {testingVoice === voice.id ? (
-                          <div className="flex items-center gap-1">
-                            <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                            Playing
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1">
-                            <Play className="w-3 h-3" />
-                            Test
-                          </div>
-                        )}
-                      </button>
+                      {voice.backendVoiceId && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            testVoice(voice);
+                          }}
+                          disabled={testingVoice === voice.id}
+                          className={`ml-2 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                            testingVoice === voice.id
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-blue-500 text-white hover:bg-blue-600'
+                          }`}
+                        >
+                          {testingVoice === voice.id ? (
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                              Playing
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <Play className="w-3 h-3" />
+                              Test
+                            </div>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </button>
                 ))}

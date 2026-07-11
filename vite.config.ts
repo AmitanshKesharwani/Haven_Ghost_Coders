@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173, // Default Vite port - sometimes more permissive
+    port: 5174, // Updated port to match client WebSocket
     open: true,
   },
   build: {

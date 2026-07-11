@@ -45,9 +45,15 @@ class SpeechToTextService {
   private isRecording = false;
   private onTranscriptCallback: ((result: SpeechToTextResult) => void) | null = null;
   private onErrorCallback: ((error: Error) => void) | null = null;
+  // Fallback to browser SpeechRecognition when backend fails
+  private fallbackStop: (() => void) | null = null;
+  private languageCode: string = 'en-IN';
 
   constructor() {
     // No API key needed – we use the self‑hosted backend.
+    // Initialize fallback fields
+    this.fallbackStop = null;
+    this.languageCode = 'en-IN';
   }
 
   /**
@@ -56,8 +62,8 @@ class SpeechToTextService {
   async startRecording(options: SpeechToTextOptions = {}): Promise<void> {
     try {
       // Request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
@@ -66,7 +72,9 @@ class SpeechToTextService {
         },
       });
 
-      const mimeType = 'audio/webm;codecs=opus';
+        const mimeType = 'audio/webm;codecs=opus';
+        // Store language code for fallback
+        this.languageCode = options.language || navigator.language || 'en-IN';
       this.mediaRecorder = new MediaRecorder(
         stream,
         MediaRecorder.isTypeSupported(mimeType) ? { mimeType } : undefined
@@ -93,6 +101,11 @@ class SpeechToTextService {
    * Stop recording and trigger backend processing.
    */
   stopRecording(): void {
+    // If using browser fallback, stop it
+    if (this.fallbackStop) {
+      this.fallbackStop();
+      this.fallbackStop = null;
+    }
     if (this.mediaRecorder && this.isRecording) {
       this.mediaRecorder.stop();
     }
@@ -128,7 +141,9 @@ class SpeechToTextService {
       };
       if (this.onTranscriptCallback) this.onTranscriptCallback(result);
     } catch (err) {
-      this.handleError(err as Error);
+      console.warn('Backend STT failed, falling back to browser SpeechRecognition', err);
+      // Attempt browser SpeechRecognition as fallback
+      this.fallbackStop = this.createBrowserSTT(this.languageCode);
     }
   }
 
@@ -233,6 +248,33 @@ class SpeechToTextService {
   /**
    * Internal error handling helper.
    */
+  /** Create a browser SpeechRecognition fallback */
+  private createBrowserSTT(languageCode: string): () => void {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      this.handleError(new Error('SpeechRecognition not supported'));
+      return () => {};
+    }
+    const rec = new SR();
+    rec.lang = languageCode;
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.onresult = (e: any) => {
+      const r = e.results[0]?.[0];
+      const result: SpeechToTextResult = {
+        transcript: r?.transcript ?? '',
+        confidence: r?.confidence ?? 0,
+        language: languageCode,
+        isFinal: true,
+        alternatives: []
+      };
+      this.onTranscriptCallback?.(result);
+    };
+    rec.onerror = (e: any) => this.handleError(new Error(e.error ?? 'SpeechRecognition error'));
+    rec.start();
+    return () => rec.stop();
+  }
+
   private handleError(err: Error): void {
     console.error('❌ Speech-to-Text error:', err);
     if (this.onErrorCallback) this.onErrorCallback(err);

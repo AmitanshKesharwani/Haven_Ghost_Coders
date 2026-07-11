@@ -91,5 +91,5 @@ PORT = int(os.getenv("HAVEN_PORT", "8000"))
 # via a public Cloudflare tunnel.
 ALLOWED_ORIGINS = os.getenv(
     "HAVEN_ALLOWED_ORIGINS",
-    "http://localhost:5173,http://localhost:3000",
+    "http://localhost:5173,http://localhost:5174,http://localhost:3000",
 ).split(",")

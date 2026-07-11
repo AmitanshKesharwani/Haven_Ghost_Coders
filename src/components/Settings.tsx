@@ -703,6 +703,9 @@ export const Settings: React.FC<SettingsProps> = ({ navigateTo }) => {
                           ? 'text-black' 
                           : 'text-gray-900'
                       }`}>{lang.label}</span>
+                      {lang.id !== 'english' && (
+                        <span className="ml-2 text-xs bg-yellow-200 text-yellow-800 rounded px-1">Coming Soon</span>
+                      )}
                       {isSelected && (
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       )}

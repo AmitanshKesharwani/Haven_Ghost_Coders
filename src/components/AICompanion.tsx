@@ -1434,19 +1434,8 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
                   <Heart className={`w-4 h-4 ${voiceResponseEnabled ? 'text-white' : 'text-blue-500'}`} />
                 </Button>
 
-                {/* Video mood detection button */}
-                <Button
-                  onClick={handleVideoMood}
-                  variant={isVideoMode ? "default" : "outline"}
-                  size="sm"
-                  className={`rounded-full transition-all duration-200 ${isVideoMode
-                    ? "bg-green-500 hover:bg-green-600 text-white shadow-md"
-                    : "border-primary/30 hover:bg-primary/5 hover:border-primary/50"
-                    }`}
-                  title={isVideoMode ? "Stop mood detection" : "Start mood detection"}
-                >
-                  {isVideoMode ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
-                </Button>
+
+                
 
                 {/* Voice control button */}
                 {isVoicePlaying && (
