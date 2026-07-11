@@ -59,6 +59,18 @@ XTTS_VOICES = {
             "description": "Placeholder English voice 2",
             "ref_clip_path": str(BASE_DIR / "voices" / "xtts_ref_en_2.wav"),
         },
+        {
+            "voice_id": "en_male_1",
+            "name": "English Male Voice 1",
+            "description": "Stopgap: reuses en_2 clip until a dedicated male reference is recorded",
+            "ref_clip_path": str(BASE_DIR / "voices" / "xtts_ref_en_2.wav"),
+        },
+        {
+            "voice_id": "en_male_2",
+            "name": "English Male Voice 2",
+            "description": "Stopgap: reuses en_1 clip until a dedicated male reference is recorded",
+            "ref_clip_path": str(BASE_DIR / "voices" / "xtts_ref_en_1.wav"),
+        },
     ],
     "hi": [
         {
@@ -71,6 +83,12 @@ XTTS_VOICES = {
             "voice_id": "hi_2",
             "name": "Hindi Voice 2",
             "description": "Placeholder Hindi voice 2",
+            "ref_clip_path": str(BASE_DIR / "voices" / "xtts_ref_hi_2.wav"),
+        },
+        {
+            "voice_id": "hi_male_1",
+            "name": "Hindi Male Voice 1",
+            "description": "Stopgap: reuses hi_2 clip until a dedicated male reference is recorded",
             "ref_clip_path": str(BASE_DIR / "voices" / "xtts_ref_hi_2.wav"),
         },
     ],
