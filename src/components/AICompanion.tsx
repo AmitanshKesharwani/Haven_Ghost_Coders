@@ -1420,19 +1420,7 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
 
               {/* Voice/Video/Response Toggles */}
               <div className="flex items-center gap-3 justify-center">
-                {/* Voice response toggle */}
-                <Button
-                  onClick={() => setVoiceResponseEnabled(!voiceResponseEnabled)}
-                  variant={voiceResponseEnabled ? "default" : "outline"}
-                  size="sm"
-                  className={`rounded-full transition-all duration-200 ${voiceResponseEnabled
-                    ? "bg-blue-500 hover:bg-blue-600 text-white shadow-md"
-                    : "border-primary/30 hover:bg-primary/5 hover:border-primary/50"
-                    }`}
-                  title={voiceResponseEnabled ? "Disable voice responses" : "Enable voice responses"}
-                >
-                  <Heart className={`w-4 h-4 ${voiceResponseEnabled ? 'text-white' : 'text-blue-500'}`} />
-                </Button>
+
 
 
                 

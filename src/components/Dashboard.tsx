@@ -6,7 +6,7 @@ import { Badge } from './ui/badge';
 import { ArrowLeft, Flame, Trophy, TrendingUp, Star, Target, Lightbulb } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import type { Screen, UserData } from '../types';
-
+import { useDashboardData } from '../hooks/useDashboardData';
 interface DashboardProps {
   navigateTo: (screen: Screen) => void;
   userData: UserData;
@@ -14,19 +14,11 @@ interface DashboardProps {
 
 export function Dashboard({ navigateTo, userData }: DashboardProps) {
   const { currentTheme } = useTheme();
-  const insights = [
-    "Your sleep quality has improved by 15% this week!",
-    "Morning check-ins seem to boost your mood for the day.",
-    "You're most productive on days when you complete breathing exercises.",
-    "Your stress levels are lower after journaling sessions."
-  ];
+  const { data, loading, error } = useDashboardData(userData.id);
+  const insights = data?.insights ?? [];
 
-  const weeklyGoals = [
-    { name: "Complete daily check-ins", progress: 5, target: 7 },
-    { name: "Practice mindfulness", progress: 3, target: 5 },
-    { name: "Journal entries", progress: 4, target: 3 },
-    { name: "Breathing exercises", progress: 2, target: 4 }
-  ];
+  const weeklyGoals = data?.weeklyGoals ?? [];
+  const milestones = data?.milestones ?? [];
 
   return (
     <div className={`relative min-h-screen p-6 ${

@@ -265,13 +265,9 @@ export function AdvancedDashboard({ userId, navigateTo }: AdvancedDashboardProps
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="bg-white">Week</Button>
-            <Button variant="ghost" size="sm">Month</Button>
-            <Button variant="ghost" size="sm">Year</Button>
-            <Button variant="outline" size="sm" className="bg-white">🔄 Refresh</Button>
-            <Button variant="outline" size="sm" className="bg-white">💡 Tips</Button>
-          </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="bg-white" onClick={loadDashboardData}>🔄 Refresh</Button>
+            </div>
         </div>
 
         {/* Main Stats Grid */}
