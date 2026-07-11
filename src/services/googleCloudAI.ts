@@ -149,14 +149,14 @@ export class GoogleCloudMentalHealthAI {
     }
 
     if (!this.model) {
-      throw new Error('Groq AI model not initialized. Please check your API key.');
+      throw new Error('AI model not initialized. Please check your Supabase configuration.');
     }
 
     try {
       const prompt = this.buildTherapeuticPrompt(userMessage, context);
       
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📤 SENDING TO GROQ API');
+      console.log('📤 SENDING TO AI COMPANION EDGE FUNCTION');
       console.log('User Message:', userMessage);
       console.log('Prompt Length:', prompt.length, 'characters');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -183,7 +183,7 @@ export class GoogleCloudMentalHealthAI {
       }
       
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📥 RECEIVED FROM GROQ');
+      console.log('📥 RECEIVED FROM AI COMPANION EDGE FUNCTION');
       console.log('Response Length:', generatedText?.length || 0, 'characters');
       console.log('First 200 chars:', generatedText?.substring(0, 200));
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -199,14 +199,13 @@ export class GoogleCloudMentalHealthAI {
       console.log('✅ Final message to user:', parsed.message.substring(0, 100) + '...');
       
       return parsed;
-
     } catch (error: any) {
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.error('❌ GROQ API ERROR');
-      console.error('Error:', error.message);
-      console.error('Stack:', error.stack?.substring(0, 200));
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      throw new Error(`AI Service Error: ${error.message}. Please check your API key and internet connection.`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('❌ AI COMPANION EDGE FUNCTION ERROR');
+      console.log('Error:', error.message);
+      console.log('Stack:', error.stack?.substring(0, 200));
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      throw new Error(`AI Service Error: ${error.message}. Please check your connection.`);
     }
   }
 

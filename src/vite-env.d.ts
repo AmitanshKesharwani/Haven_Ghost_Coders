@@ -1,7 +1,6 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_GROQ_API_KEY: string
   readonly VITE_HF_TOKEN: string
   readonly VITE_ENCRYPTION_KEY: string
   readonly VITE_VERTEX_AI_API_KEY: string

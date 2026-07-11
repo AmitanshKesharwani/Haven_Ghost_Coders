@@ -312,8 +312,6 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
     userData: userProfile || userData,
     hasUserData: !!(userProfile || userData),
     currentUser: currentUser?.id,
-    apiKey: import.meta.env.VITE_GROQ_API_KEY ? 'Present' : 'Missing',
-    apiKeyLength: import.meta.env.VITE_GROQ_API_KEY?.length || 0
   });
 
   // Crisis helplines for India - Government Approved Only
@@ -1016,14 +1014,14 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
                   <p className="text-xs text-muted-foreground">Always here to listen</p>
                   {/* API Status Indicator */}
                   <div className="flex items-center gap-2 mt-1">
-                    <div className={`w-2 h-2 rounded-full ${import.meta.env.VITE_GROQ_API_KEY && !import.meta.env.VITE_GROQ_API_KEY.startsWith('demo-')
+                    <div className={`w-2 h-2 rounded-full ${import.meta.env.VITE_SUPABASE_URL
                       ? 'bg-green-500'
-                      : 'bg-yellow-500'
+                      : 'bg-red-500'
                       }`}></div>
                     <span className="text-xs text-gray-500">
-                      {import.meta.env.VITE_GROQ_API_KEY && !import.meta.env.VITE_GROQ_API_KEY.startsWith('demo-')
+                      {import.meta.env.VITE_SUPABASE_URL
                         ? 'AI Powered'
-                        : 'Demo Mode'}
+                        : 'Offline'}
                     </span>
                   </div>
                 </div>
@@ -1153,35 +1151,7 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
               </Card>
             )}
 
-            {/* API Key Notice */}
-            {(!import.meta.env.VITE_GROQ_API_KEY || import.meta.env.VITE_GROQ_API_KEY.startsWith('demo-')) && (
-              <Card className="p-4 mb-6 bg-yellow-50 border-yellow-200 rounded-xl shadow-md">
-                <div className="flex items-start gap-3">
-                  <span className="text-yellow-600 text-lg">⚠️</span>
-                  <div className="flex-1">
-                    <p className="text-sm text-yellow-800 font-semibold">Demo Mode Active</p>
-                    <p className="text-xs text-yellow-700 mt-1">
-                      Add your Groq API key to enable real AI responses.
-                      <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="underline ml-1 hover:text-yellow-800">
-                        Get free API key
-                      </a>
-                    </p>
-                    <div className="mt-3">
-                      <button
-                        onClick={() => {
-                          const testMessage = "Hello, I'm feeling a bit anxious today. Can you help me?";
-                          setInputValue(testMessage);
-                          setTimeout(() => handleSendMessage(), 100);
-                        }}
-                        className="text-xs bg-yellow-200 hover:bg-yellow-300 px-3 py-2 rounded-lg transition-all duration-200 font-medium"
-                      >
-                        Test Demo Response
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            )}
+
 
             {/* Messages */}
             <div className="flex-1 space-y-8 mb-8 overflow-y-auto p-6 rounded-xl bg-background/50 backdrop-blur-sm scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">

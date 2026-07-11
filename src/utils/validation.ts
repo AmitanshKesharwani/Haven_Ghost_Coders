@@ -109,9 +109,7 @@ export const validateAPIKey = (apiKey: string): ValidationResult => {
 
 export const validateEnvironmentVariables = (): ValidationResult => {
   const errors: string[] = [];
-  const requiredVars = [
-    'VITE_GROQ_API_KEY'
-  ];
+  const requiredVars: string[] = [];
 
   const optionalVars = [
     'VITE_FIREBASE_API_KEY',
