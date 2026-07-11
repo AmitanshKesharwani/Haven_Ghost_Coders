@@ -6,3 +6,6 @@ server.log
 warmup_test.wav
 __pycache__/
 *.pyc
+cloudflared.deb
+*.wav
+tunnel.log
