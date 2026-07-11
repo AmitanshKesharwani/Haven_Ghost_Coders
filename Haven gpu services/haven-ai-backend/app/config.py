@@ -81,6 +81,7 @@ CLASSIFIER_MODEL_ID = os.getenv("CLASSIFIER_MODEL_ID", "sentinet/suicidality")
 # conservative (lower threshold = more sensitive) is safer for a mental
 # health product.
 CLASSIFIER_RISK_THRESHOLD = float(os.getenv("CLASSIFIER_RISK_THRESHOLD", "0.7"))
+CLASSIFIER_AMBIGUOUS_THRESHOLD = float(os.getenv("CLASSIFIER_AMBIGUOUS_THRESHOLD", "0.15"))
 
 # ── Server ───────────────────────────────────────────────────────────────
 HOST = os.getenv("HAVEN_HOST", "0.0.0.0")
