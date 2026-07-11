@@ -142,7 +142,7 @@ export default function StressBusterSession() {
     
     const savedVoiceURI = userProfile?.preferences?.selectedVoice;
     if (savedVoiceURI) {
-      const savedVoice = AVAILABLE_VOICES.find(v => v.voiceURI === savedVoiceURI || v.name === savedVoiceURI);
+      const savedVoice = AVAILABLE_VOICES.find(v => v.backendVoiceId === savedVoiceURI || v.name === savedVoiceURI);
       if (savedVoice) return savedVoice;
     }
     return AVAILABLE_VOICES[0]!;

@@ -1,3 +1,4 @@
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const corsHeaders = {
@@ -18,14 +19,15 @@ async function deriveAesKey(secret: string): Promise<CryptoKey> {
 }
 
 async function decryptPayload(payload: { iv: string; data: string }): Promise<any> {
+  // @ts-ignore
   const keyMaterial = Deno.env.get("ENCRYPTION_KEY");
   if (!keyMaterial) throw new Error("Missing ENCRYPTION_KEY in Edge Function secrets.");
   if (!payload?.iv || !payload?.data) throw new Error("Invalid encrypted payload.");
 
   try {
     const key = await deriveAesKey(keyMaterial);
-    const iv = fromBase64(payload.iv);
-    const ciphertext = fromBase64(payload.data);
+    const iv: Uint8Array = fromBase64(payload.iv);
+    const ciphertext: Uint8Array = fromBase64(payload.data);
 
     console.log("Attempting AES-GCM decryption with iv length:", iv.length, "and ciphertext length:", ciphertext.length);
     const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
@@ -59,7 +61,8 @@ serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    console.log("Edge function received body:", JSON.stringify(body));
+    // @ts-ignore
+  console.log("Edge function received body:", JSON.stringify(body));
     const decrypted = await decryptPayload(body?.payload);
     const content = typeof decrypted?.content === "string" ? decrypted.content : "";
     const mood = typeof decrypted?.mood === "string" ? decrypted.mood : "neutral";
@@ -70,7 +73,8 @@ serve(async (req: Request) => {
       });
     }
 
-    const fireworksKey = Deno.env.get("FIREWORKS_API_KEY");
+  // @ts-ignore
+  const fireworksKey = Deno.env.get("FIREWORKS_API_KEY");
     if (!fireworksKey) throw new Error("Missing FIREWORKS_API_KEY in Edge Function secrets.");
 
     const prompt = `Mood: ${mood}\nJournal content:\n${content}`;

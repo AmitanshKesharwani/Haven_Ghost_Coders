@@ -10,6 +10,7 @@ export interface UserPreferences {
 }
 
 export interface UserData {
+  id?: string; // optional user identifier
   onboardingCompleted: boolean;
   preferences?: UserPreferences;
   quizCompleted: boolean;

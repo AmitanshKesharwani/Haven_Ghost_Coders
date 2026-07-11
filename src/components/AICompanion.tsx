@@ -409,7 +409,7 @@ export function AICompanion({ navigateTo, userData }: AICompanionProps = {}) {
 
       // Store the stop handle so the "stop" button can cancel
       mediaRecorderRef.current = { stop: () => sttInstance.stop() } as any;
-      mediaRecorderRef.current = { stop: stopSTT } as any;
+
 
     } catch (error) {
       console.error('Error starting voice input:', error);

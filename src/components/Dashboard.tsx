@@ -14,11 +14,12 @@ interface DashboardProps {
 
 export function Dashboard({ navigateTo, userData }: DashboardProps) {
   const { currentTheme } = useTheme();
-  const { data, loading, error } = useDashboardData(userData.id);
+  const { data, loading, error } = useDashboardData(userData.id ?? "");
   const insights = data?.insights ?? [];
 
   const weeklyGoals = data?.weeklyGoals ?? [];
   const milestones = data?.milestones ?? [];
+
 
   return (
     <div className={`relative min-h-screen p-6 ${
