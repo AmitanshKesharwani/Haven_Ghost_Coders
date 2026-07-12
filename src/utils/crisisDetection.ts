@@ -1,3 +1,5 @@
+import { supabase } from '../services/supabaseClient';
+import { encryptTransportPayload } from '../services/transportEncryption';
 // Crisis detection and escalation utilities for Indian context
 
 export interface CrisisHelpline {
@@ -175,14 +177,54 @@ export async function evaluateCrisis(text: string): Promise<{ assessment: Crisis
 
   const keywordTriggered = ['moderate', 'high', 'severe'].includes(keywordAssessment.level);
   const classifierTriggered = classifierResult && classifierResult.risk_level === 'high';
+  const classifierAmbiguous = classifierResult && classifierResult.risk_level === 'ambiguous' && !keywordTriggered;
+
+  let ambiguousEscalated = false;
+  if (classifierAmbiguous) {
+    try {
+      const payload = await encryptTransportPayload({ text });
+      const { data, error } = await supabase.functions.invoke('crisis-second-opinion', { body: { payload } });
+
+      if (error) {
+        console.error('[crisis] second-opinion call failed, defaulting to escalate:', error);
+        ambiguousEscalated = true;
+      } else if (data?.is_genuine_concern === true) {
+        ambiguousEscalated = true;
+        console.log('[crisis] ambiguous case escalated by second-opinion review:', data.reasoning);
+      } else {
+        console.log('[crisis] ambiguous case reviewed, not escalated:', data?.reasoning);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase.from('crisis_events').insert({
+              user_id: user.id,
+              severity: 'moderate',
+              trigger_message: text,
+              detected_indicators: ['ambiguous_classifier_review'],
+              interventions_taken: [],
+              resolution: 'reviewed_not_escalated',
+              notes: `Second-opinion reasoning: ${data?.reasoning ?? 'none'}`,
+            });
+          }
+        } catch (logError) {
+          console.error('[crisis] failed to log ambiguous review:', logError);
+        }
+      }
+    } catch (err) {
+      console.error('[crisis] second-opinion request threw, defaulting to escalate:', err);
+      ambiguousEscalated = true;
+    }
+  }
+
   let triggeredBy = 'none';
   if (keywordTriggered && classifierTriggered) triggeredBy = 'both';
   else if (keywordTriggered) triggeredBy = 'keyword';
   else if (classifierTriggered) triggeredBy = 'classifier';
+  else if (ambiguousEscalated) triggeredBy = 'ambiguous_escalated';
 
-  // Merge classifier result into assessment if classifier indicates high risk
+  // Merge classifier result into assessment if classifier indicates high risk (or ambiguous case escalated)
   let finalAssessment = { ...keywordAssessment };
-  if (classifierTriggered) {
+  if (classifierTriggered || ambiguousEscalated) {
     // Upgrade severity to at least 'high'
     const levelPriority: Record<CrisisLevel, number> = { none: 0, low: 1, moderate: 2, high: 3, severe: 4 };
     if (levelPriority[keywordAssessment.level] < levelPriority['high']) {
