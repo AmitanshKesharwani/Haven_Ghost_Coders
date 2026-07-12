@@ -17,7 +17,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
         {/* Animated Logo */}
         <div className="relative mb-8">
           <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
-            <img src="/logo.png" alt="Haven" className="w-12 h-12 animate-pulse" />
+            <img src="/logo.jpeg" alt="Haven" className="w-12 h-12 animate-pulse" />
           </div>
           
           {/* Floating Icons */}

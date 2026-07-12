@@ -145,7 +145,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
             {/* Animated Logo */}
             <div className="mb-12 group">
               <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center mb-8 shadow-2xl shadow-purple-500/25 group-hover:shadow-purple-500/50 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
-                <img src="/logo.png" alt="Haven" className="w-10 h-10" />
+                <img src="/logo.jpeg" alt="Haven" className="w-10 h-10" />
               </div>
               <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-200 to-blue-200 mb-4 tracking-tight animate-fade-in">
                 Haven
@@ -201,7 +201,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
             {/* Mobile Header */}
             <div className="text-center mb-10 lg:hidden">
               <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-purple-500/25 animate-bounce">
-                <img src="/logo.png" alt="Haven" className="w-10 h-10" />
+                <img src="/logo.jpeg" alt="Haven" className="w-10 h-10" />
               </div>
               <h1 className={`text-4xl font-black mb-3 ${
                 currentTheme === 'whatsapp' 
@@ -454,7 +454,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
             {/* Help Text */}
             <div className="mt-8 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl backdrop-blur-sm">
               <p className="text-sm text-purple-200 text-center flex items-center justify-center">
-                <img src="/logo.png" alt="Haven" className="w-4 h-4 mr-2 animate-pulse" />
+                <img src="/logo.jpeg" alt="Haven" className="w-4 h-4 mr-2 animate-pulse" />
                 Your mental health mattersssss
               </p>
             </div>
