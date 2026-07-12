@@ -4,7 +4,7 @@
 
 ### An open-source AI mental wellness companion for Indian students
 
-*Built on AMD Instinct GPUs · Powered by Fireworks AI · Fully migrated off Firebase & Gemini*
+*Built on AMD Instinct GPUs · Powered by Fireworks AI*
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-haven--omega--two.vercel.app-2ea44f?style=for-the-badge)](https://haven-omega-two.vercel.app)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)
