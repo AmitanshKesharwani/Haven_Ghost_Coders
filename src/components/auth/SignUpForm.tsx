@@ -133,8 +133,8 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSwitchToSignIn, onSucc
           <div className="relative z-10">
             {/* Animated Logo */}
             <div className="mb-12 group">
-              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-3xl flex items-center justify-center mb-8 shadow-2xl shadow-indigo-500/25 group-hover:shadow-indigo-500/50 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
-                <img src="/logo.jpeg" alt="Haven" className="w-10 h-10" />
+              <div className="w-24 h-24 rounded-3xl overflow-hidden mb-8 shadow-2xl shadow-indigo-500/25 group-hover:shadow-indigo-500/50 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
+                <img src="/logo.jpeg" alt="Haven" className="w-full h-full object-contain" />
               </div>
               <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-200 to-purple-200 mb-4 tracking-tight animate-fade-in">
                 Join Haven
@@ -185,8 +185,8 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSwitchToSignIn, onSucc
           <Card className="p-10 bg-black/40 backdrop-blur-2xl shadow-2xl border border-white/20 rounded-3xl hover:border-indigo-400/50 transition-all duration-500 hover:shadow-indigo-500/25">
             {/* Mobile Header */}
             <div className="text-center mb-10 lg:hidden">
-              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-indigo-500/25 animate-bounce">
-                <img src="/logo.jpeg" alt="Haven" className="w-10 h-10" />
+              <div className="w-24 h-24 rounded-3xl overflow-hidden mx-auto mb-6 shadow-2xl shadow-indigo-500/25 animate-bounce">
+                <img src="/logo.jpeg" alt="Haven" className="w-full h-full object-contain" />
               </div>
               <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200 mb-3">Join Haven</h1>
               <p className="text-gray-300">Your mental wellness companion</p>

@@ -475,10 +475,10 @@ export default function VoiceTherapy() {
             
             <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200">
               <p className="text-sm text-green-800 font-medium mb-1">
-                🎤 Google Chirp 3 HD Technology
+                🎤 AI Voice Technology
               </p>
               <p className="text-xs text-green-700">
-                All "Test" buttons now use Google Chirp 3 HD voices speaking in their native languages! 
+                All "Test" buttons use natural AI voices powered by Haven's self-hosted voice engine. 
                 Experience the same premium AI voices that will guide you through therapy sessions 
                 with authentic pronunciation and cultural context.
               </p>
@@ -486,7 +486,7 @@ export default function VoiceTherapy() {
 
             <div className="text-sm space-y-1 text-center">
               <p className="text-black/70">
-                ✅ {AVAILABLE_VOICES.length} Premium AI Voices with Google Chirp 3 HD Technology
+                ✅ {AVAILABLE_VOICES.length} AI Voices Available
               </p>
               <p className="text-black/70">
                 ✅ Real-time Native Language Testing: Hindi, Marathi, Tamil, Telugu, Bengali, Gujarati, Kannada, Malayalam
