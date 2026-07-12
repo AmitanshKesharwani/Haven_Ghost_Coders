@@ -412,14 +412,18 @@ export function AdvancedDashboard({ userId, navigateTo }: AdvancedDashboardProps
                 <div className="border-l-4 border-purple-400 pl-4 py-2">
                   <h4 className="font-medium text-gray-900">Last Journal Entry</h4>
                   <p className="text-sm text-gray-600 mt-1">
-                    This is your first journal entry. Haven is here to support your mental health journey with AI-powered insights and personalized care.
+                    {dashboardData.lastJournalEntry?.content || 'No journal entries yet.'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-2">21/9/2025</p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {dashboardData.lastJournalEntry?.timestamp?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                  </p>
                 </div>
                 <div className="border-l-4 border-blue-400 pl-4 py-2">
                   <h4 className="font-medium text-gray-900">Last Conversation</h4>
-                  <p className="text-sm text-gray-600 mt-1">I feel anxious</p>
-                  <p className="text-xs text-gray-400 mt-2">Invalid Date</p>
+                  <p className="text-sm text-gray-600 mt-1">{dashboardData.lastConversation?.summary || 'No recent conversations.'}</p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {dashboardData.lastConversation?.timestamp?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                  </p>
                 </div>
               </div>
             </Card>
