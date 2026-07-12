@@ -36,7 +36,7 @@ Haven is the bridge between *"I don't want to talk to anyone"* and reaching real
 - **Breathing Exercises & Calm-Down Sessions** — guided grounding tools for in-the-moment stress
 - **Clinically Validated Assessments** — PHQ-9 and GAD-7 screening, tracked over time
 - **Crisis Detection & Escalation** — keyword detection plus a dedicated ML risk classifier, surfacing verified Government of India helplines the moment it matters
-- **Privacy by Design** — anonymous-first auth, Row Level Security on every table, AES-256 encrypted payloads
+- **Privacy by Design** — Row Level Security on every table, AES-256 encrypted payloads
 
 ## 🏗️ Architecture
 
@@ -72,14 +72,13 @@ Haven is the bridge between *"I don't want to talk to anyone"* and reaching real
 | Frontend | React, TypeScript, Vite, Tailwind CSS, shadcn/ui |
 | Auth & Database | Supabase (Postgres, Row Level Security, Auth) |
 | Backend Logic | Supabase Edge Functions (Deno) |
-| AI — Chat & Journal | Open-weight LLMs via **Fireworks AI** on **AMD Instinct GPUs** |
-| AI — Facial Emotion | Vision-capable open model via Fireworks AI |
-| AI — Crisis Classifier | Fine-tuned suicidality-detection model, self-hosted on AMD GPU |
+| AI — Chat & Journal | Open-weight LLMs via **Qwen3p7-Plus on Fireworks AI** |
+| AI — Facial Emotion | Vision-capable open model via **llama-v3p2-11b-vision-instruct on Fireworks AI** |
+| AI — Crisis Classifier | Fine-tuned suicidality-detection model **sentinet/suicidality classifier from Hugginf Face**, self-hosted on AMD GPU |
 | Voice — STT | Whisper, self-hosted on AMD GPU |
 | Voice — TTS | Piper (CPU) / Coqui XTTS-v2 (AMD GPU), multilingual voice cloning |
 | Encryption | AES-256-GCM for all sensitive Edge Function payloads |
 
-> Haven was originally built on Firebase + Google Gemini and was **fully migrated to an open-source, AMD-backed stack** for the AMD Developer Hackathon. No proprietary Google AI services remain in the live application.
 
 ## 🚀 Getting Started
 
