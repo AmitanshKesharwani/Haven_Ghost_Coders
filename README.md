@@ -7,11 +7,12 @@
 *Built on AMD Instinct GPUs · Powered by Fireworks AI*
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-haven--omega--two.vercel.app-2ea44f?style=for-the-badge)](https://haven-omega-two.vercel.app)
-![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=flat-square&logo=typescript&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3ECF8E?style=flat-square&logo=supabase&logoColor=white)
-![AMD](https://img.shields.io/badge/AMD%20Instinct-ROCm-ED1C24?style=flat-square&logo=amd&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
+[![AMD](https://img.shields.io/badge/AMD%20Instinct-ROCm-ED1C24?style=flat-square&logo=amd&logoColor=white)](https://www.amd.com/en/products/accelerators/instinct.html)
+[![Fireworks AI](https://img.shields.io/badge/Fireworks%20AI-Inference-orange?style=flat-square)](https://fireworks.ai)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 </div>
 
