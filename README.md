@@ -39,6 +39,8 @@ Haven is the bridge between *"I don't want to talk to anyone"* and reaching real
 - **Crisis Detection & Escalation** — keyword detection plus a dedicated ML risk classifier, surfacing verified Government of India helplines the moment it matters
 - **Privacy by Design** — Row Level Security on every table, AES-256 encrypted payloads
 
+**The GPU services will work till the credits last in the AMD Developer Cloud**
+
 ## 🏗️ Architecture
 
 ```
